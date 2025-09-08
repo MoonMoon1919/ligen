@@ -1,1 +1,1 @@
-package ligen
+package main

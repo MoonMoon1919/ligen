@@ -8,5 +8,8 @@ func ReadMe() (doyoucompute.Document, error) {
 		return doyoucompute.Document{}, err
 	}
 
+	document.WriteIntro().
+		Text("Go package for managing license files.")
+
 	return document, nil
 }
