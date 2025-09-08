@@ -104,7 +104,7 @@ func (f FileRepository) Write(license *License) error {
 	return Write(file, license, &RenderOptions{})
 }
 
-// DOIT
+// TODO: Remove me after initial working version
 func main() {
 	repo := FileRepository{Path: "LICENSE"}
 
