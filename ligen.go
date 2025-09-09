@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/MoonMoon1919/ligen/pkg/licenses"
 )
 
 /*
@@ -20,12 +22,7 @@ Checking -
 
 // MIT
 func MITLicense(holder string, year int) (string, error) {
-	licenseContent := `Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-	`
+	licenseContent := licenses.MIT
 
 	copyright, err := Copyright(holder, year)
 	if err != nil {
@@ -38,17 +35,36 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 }
 
 // General use copyright line
+var (
+	InvalidYearError = errors.New("Invalid year")
+	EmptyNameError   = errors.New("Name must not be empty")
+	NameTooLongError = errors.New("Name must be 128 chars")
+)
+
+const (
+	// MAX_NAME_LENGTH is the maximum amount of chars the holder of a copyright can contain
+	// 128 picked arbitrarily, seemed reasonable
+	MAX_NAME_LENGTH = 128
+	// MAX_YEARS_PAST is the maximum amount of time in years that a copyright can be backdated
+	// 50 picked arbitrarily, seemed reasonable
+	MAX_YEARS_PAST = 50
+)
+
 func Copyright(name string, year int) (string, error) {
 	currentYear := time.Now().Year()
-	fiftyYearsAgo := year - 50
+	fiftyYearsAgo := currentYear - MAX_YEARS_PAST
 
 	if year > currentYear || year < fiftyYearsAgo {
-		return "", errors.New("Invalid year")
+		return "", InvalidYearError
 	}
 
 	strippedName := strings.TrimSpace(name)
 	if len(strippedName) == 0 {
-		return "", errors.New("Name must not be empty")
+		return "", EmptyNameError
+	}
+
+	if len(name) > MAX_NAME_LENGTH {
+		return "", NameTooLongError
 	}
 
 	return fmt.Sprintf("Copyright %d %s", year, strippedName), nil
@@ -102,18 +118,4 @@ func (f FileRepository) Write(license *License) error {
 	defer file.Close()
 
 	return Write(file, license, &RenderOptions{})
-}
-
-// TODO: Remove me after initial working version
-func main() {
-	repo := FileRepository{Path: "LICENSE"}
-
-	license, err := New("Max Moon", 2025)
-	if err != nil {
-		panic(err)
-	}
-
-	if err = repo.Write(&license); err != nil {
-		panic(err)
-	}
 }
