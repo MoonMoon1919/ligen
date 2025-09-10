@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/MoonMoon1919/ligen/pkg/licenses"
@@ -21,17 +22,22 @@ Checking -
 */
 
 // MIT
-func MITLicense(holder string, year int) (string, error) {
-	licenseContent := licenses.MIT
+func renderLicense(copyright *Copyright, dest *bytes.Buffer, tpl *template.Template) error {
+	return tpl.Execute(dest, copyright)
+}
 
-	copyright, err := Copyright(holder, year)
+func MITLicense(holder string, year int) (string, error) {
+	copyright, err := NewCopyright(holder, year)
 	if err != nil {
 		return "", err
 	}
 
-	fullLicense := strings.Join([]string{copyright + "\n", licenseContent}, "\n")
+	var dest bytes.Buffer
+	if err = renderLicense(&copyright, &dest, licenses.MITTemplate); err != nil {
+		return "", err
+	}
 
-	return fullLicense, nil
+	return dest.String(), nil
 }
 
 // General use copyright line
@@ -50,24 +56,29 @@ const (
 	MAX_YEARS_PAST = 50
 )
 
-func Copyright(name string, year int) (string, error) {
+type Copyright struct {
+	Holder string
+	Year   int
+}
+
+func NewCopyright(name string, year int) (Copyright, error) {
 	currentYear := time.Now().Year()
 	fiftyYearsAgo := currentYear - MAX_YEARS_PAST
 
 	if year > currentYear || year < fiftyYearsAgo {
-		return "", InvalidYearError
+		return Copyright{}, InvalidYearError
 	}
 
 	strippedName := strings.TrimSpace(name)
 	if len(strippedName) == 0 {
-		return "", EmptyNameError
+		return Copyright{}, EmptyNameError
 	}
 
 	if len(name) > MAX_NAME_LENGTH {
-		return "", NameTooLongError
+		return Copyright{}, NameTooLongError
 	}
 
-	return fmt.Sprintf("Copyright %d %s", year, strippedName), nil
+	return Copyright{Holder: name, Year: year}, nil
 }
 
 // License stuff

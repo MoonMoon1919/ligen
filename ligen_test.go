@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"strings"
 	"testing"
 
@@ -75,18 +75,20 @@ func TestCopyrightRender(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// When
-			rendered, err := Copyright(tc.input.holder, tc.input.year)
+			rendered, err := NewCopyright(tc.input.holder, tc.input.year)
 			checkError(tc.errorMessage, err, t)
 			if tc.errorMessage != "" {
 				return
 			}
 
 			// Then
-			// Generate the expected output
-			expected := fmt.Sprintf("Copyright %d %s", tc.input.year, strings.TrimSpace(tc.input.holder))
+			expected := Copyright{
+				Year:   tc.input.year,
+				Holder: strings.TrimSpace(tc.input.holder),
+			}
 
 			if rendered != expected {
-				t.Errorf("Expected %s, got %s", expected, rendered)
+				t.Errorf("Expected %v, got %v", expected, rendered)
 			}
 		})
 	}
@@ -131,10 +133,11 @@ func TestMITLicense(t *testing.T) {
 			}
 
 			// Then
-			expected := strings.Join([]string{fmt.Sprintf("Copyright %d %s", tc.input.year, strings.TrimSpace(tc.input.holder)) + "\n", licenses.MIT}, "\n")
+			var expected bytes.Buffer
+			licenses.MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
 
-			if rendered != expected {
-				t.Errorf("Expected %s, got %s", expected, rendered)
+			if rendered != expected.String() {
+				t.Errorf("Expected %s, got %s", expected.String(), rendered)
 			}
 		})
 	}
