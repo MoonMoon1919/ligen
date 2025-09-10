@@ -181,6 +181,29 @@ func TestLicenseRender(t *testing.T) {
 				return expected, nil
 			},
 		},
+		{
+			name: "Pass-Mozilla",
+			input: input{
+				holder:      "Peanut Butter",
+				projectName: "Cool",
+				year:        2025,
+				licenseType: MOZILLA_2_0,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) ([]string, error) {
+				expected := make([]string, 2)
+				expected[0] = MozillaLicenseBody
+
+				// Reset the buffer so we can re-use it
+				var dest bytes.Buffer
+				if err := NoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: in.holder}); err != nil {
+					return nil, err
+				}
+				expected[1] = dest.String()
+
+				return expected, nil
+			},
+		},
 	}
 
 	for _, tc := range tests {
