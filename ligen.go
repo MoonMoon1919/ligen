@@ -8,8 +8,6 @@ import (
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/MoonMoon1919/ligen/pkg/licenses"
 )
 
 /*
@@ -21,23 +19,26 @@ Checking -
 - Answer "what license is in this repo?"
 */
 
-// MIT
 func renderLicense(copyright *Copyright, dest *bytes.Buffer, tpl *template.Template) error {
 	return tpl.Execute(dest, copyright)
 }
 
-func MITLicense(holder string, year int) (string, error) {
-	copyright, err := NewCopyright(holder, year)
-	if err != nil {
-		return "", err
-	}
+// MIT
+// Body of text for an MIT License
+const MitTemplateBody = `
+Copyright {{.Year}} {{.Holder}}
 
-	var dest bytes.Buffer
-	if err = renderLicense(&copyright, &dest, licenses.MITTemplate); err != nil {
-		return "", err
-	}
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-	return dest.String(), nil
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+`
+
+var MITTemplate = template.Must(template.New("MIT").Parse(MitTemplateBody))
+
+func MITLicense(copyright *Copyright, dest *bytes.Buffer) error {
+	return renderLicense(copyright, dest, MITTemplate)
 }
 
 // General use copyright line
@@ -86,14 +87,33 @@ type License struct {
 	content string
 }
 
-func New(holder string, year int) (License, error) {
-	content, err := MITLicense(holder, year)
+type LicenseType int
+
+const (
+	MIT LicenseType = iota + 1
+)
+
+func New(holder string, year int, licenseType LicenseType) (License, error) {
+	copyright, err := NewCopyright(holder, year)
+	if err != nil {
+		return License{}, err
+	}
+
+	var content bytes.Buffer
+
+	switch licenseType {
+	case MIT:
+		err = MITLicense(&copyright, &content)
+	default:
+		return License{}, errors.New("Unsupported license type")
+	}
+
 	if err != nil {
 		return License{}, err
 	}
 
 	return License{
-		content: content,
+		content: content.String(),
 	}, nil
 }
 

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-
-	"github.com/MoonMoon1919/ligen/pkg/licenses"
 )
 
 func checkError(expected string, received error, t *testing.T) {
@@ -113,20 +111,13 @@ func TestMITLicense(t *testing.T) {
 			},
 			errorMessage: "",
 		},
-		{
-			name: "Failing-CopyrightError",
-			input: input{
-				holder: "Peanut Butter",
-				year:   1973,
-			},
-			errorMessage: InvalidYearError.Error(),
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// When
-			rendered, err := MITLicense(tc.input.holder, tc.input.year)
+			var rendered bytes.Buffer
+			err := MITLicense(&Copyright{Holder: tc.input.holder, Year: tc.input.year}, &rendered)
 			checkError(tc.errorMessage, err, t)
 			if tc.errorMessage != "" {
 				return
@@ -134,10 +125,40 @@ func TestMITLicense(t *testing.T) {
 
 			// Then
 			var expected bytes.Buffer
-			licenses.MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
+			MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
 
-			if rendered != expected.String() {
-				t.Errorf("Expected %s, got %s", expected.String(), rendered)
+			if rendered.String() != expected.String() {
+				t.Errorf("Expected %s, got %s", expected.String(), rendered.String())
+			}
+		})
+	}
+}
+
+func TestLicenseNew(t *testing.T) {
+	type input struct {
+		year   int
+		holder string
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		errorMessage string
+	}{}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			license, err := New(tc.input.holder, tc.input.year, MIT)
+			checkError(tc.errorMessage, err, t)
+			if tc.errorMessage != "" {
+				return
+			}
+
+			var expected bytes.Buffer
+			MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
+
+			if license.content != expected.String() {
+				t.Errorf("Expected %s, got %s", expected.String(), license.content)
 			}
 		})
 	}
