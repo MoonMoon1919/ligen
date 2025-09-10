@@ -2,6 +2,7 @@ package ligen
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -96,6 +97,7 @@ func TestLicenseRender(t *testing.T) {
 	type input struct {
 		year        int
 		holder      string
+		projectName string
 		licenseType LicenseType
 	}
 
@@ -103,7 +105,7 @@ func TestLicenseRender(t *testing.T) {
 		name            string
 		input           input
 		errorMessage    string
-		expectedBuilder func(in input) (string, error)
+		expectedBuilder func(in input) ([]string, error)
 	}{
 		{
 			name: "Pass-MIT",
@@ -113,14 +115,14 @@ func TestLicenseRender(t *testing.T) {
 				licenseType: MIT,
 			},
 			errorMessage: "",
-			expectedBuilder: func(in input) (string, error) {
+			expectedBuilder: func(in input) ([]string, error) {
 				var expected bytes.Buffer
 
 				if err := MITTemplate.Execute(&expected, Copyright{Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
-					return "", nil
+					return nil, nil
 				}
 
-				return expected.String(), nil
+				return []string{expected.String()}, nil
 			},
 		},
 		{
@@ -131,8 +133,8 @@ func TestLicenseRender(t *testing.T) {
 				licenseType: BOOST_1_0,
 			},
 			errorMessage: "",
-			expectedBuilder: func(in input) (string, error) {
-				return BoostBody, nil
+			expectedBuilder: func(in input) ([]string, error) {
+				return []string{BoostBody}, nil
 			},
 		},
 		{
@@ -143,8 +145,36 @@ func TestLicenseRender(t *testing.T) {
 				licenseType: UNLICENSE,
 			},
 			errorMessage: "",
-			expectedBuilder: func(in input) (string, error) {
-				return UnlicenseBody, nil
+			expectedBuilder: func(in input) ([]string, error) {
+				return []string{UnlicenseBody}, nil
+			},
+		},
+		{
+			name: "Pass-Apache",
+			input: input{
+				holder:      "Peanut Butter",
+				year:        2025,
+				licenseType: APACHE_2_0,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) ([]string, error) {
+				expected := make([]string, 2)
+
+				var dest bytes.Buffer
+				if err := ApacheTemplate.Execute(&dest, Copyright{Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
+					return nil, nil
+				}
+
+				expected[0] = dest.String()
+
+				dest.Reset()
+				if err := NoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
+					return nil, err
+				}
+
+				expected[1] = dest.String()
+
+				return expected, nil
 			},
 		},
 	}
@@ -165,7 +195,12 @@ func TestLicenseRender(t *testing.T) {
 				return
 			}
 
-			if rendered[len(rendered)-1].content != expected {
+			renderedConent := make([]string, len(rendered))
+			for idx, render := range rendered {
+				renderedConent[idx] = render.content
+			}
+
+			if !reflect.DeepEqual(expected, renderedConent) {
 				t.Errorf("Expected %s, got %s", expected, rendered)
 			}
 		})
