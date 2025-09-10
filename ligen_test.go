@@ -94,19 +94,64 @@ func TestCopyrightRender(t *testing.T) {
 
 func TestLicenseRender(t *testing.T) {
 	type input struct {
-		year   int
-		holder string
+		year        int
+		holder      string
+		licenseType LicenseType
 	}
 
 	tests := []struct {
-		name         string
-		input        input
-		errorMessage string
-	}{}
+		name            string
+		input           input
+		errorMessage    string
+		expectedBuilder func(in input) (string, error)
+	}{
+		{
+			name: "Pass-MIT",
+			input: input{
+				holder:      "Peanut Butter",
+				year:        2025,
+				licenseType: MIT,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) (string, error) {
+				var expected bytes.Buffer
+
+				if err := MITTemplate.Execute(&expected, Copyright{Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
+					return "", nil
+				}
+
+				return expected.String(), nil
+			},
+		},
+		{
+			name: "Pass-BSL-1.0",
+			input: input{
+				holder:      "Peanut Butter",
+				year:        2025,
+				licenseType: BOOST_1_0,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) (string, error) {
+				return BoostBody, nil
+			},
+		},
+		{
+			name: "Pass-Unlicense",
+			input: input{
+				holder:      "Peanut Butter",
+				year:        2025,
+				licenseType: UNLICENSE,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) (string, error) {
+				return UnlicenseBody, nil
+			},
+		},
+	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			license, _ := New(tc.input.holder, tc.input.year, MIT)
+			license, _ := New(tc.input.holder, tc.input.year, tc.input.licenseType)
 
 			rendered, err := license.Render()
 			checkError(tc.errorMessage, err, t)
@@ -114,11 +159,14 @@ func TestLicenseRender(t *testing.T) {
 				return
 			}
 
-			var expected bytes.Buffer
-			MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
+			expected, err := tc.expectedBuilder(tc.input)
+			if err != nil {
+				t.Fatalf("Got error generating expected output %s", err.Error())
+				return
+			}
 
-			if rendered[len(rendered)-1].content != expected.String() {
-				t.Errorf("Expected %s, got %s", expected.String(), rendered)
+			if rendered[len(rendered)-1].content != expected {
+				t.Errorf("Expected %s, got %s", expected, rendered)
 			}
 		})
 	}
