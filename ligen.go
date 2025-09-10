@@ -443,7 +443,13 @@ type License struct {
 	generatorFunc writeableGenerator
 }
 
-func New(holder string, year int, licenseType LicenseType) (*License, error) {
+func New(projectName string, holder string, year int, licenseType LicenseType) (*License, error) {
+	projectName = strings.TrimSpace(projectName)
+
+	if len(projectName) == 0 {
+		return &License{}, errors.New("Project name must have at least 1 character")
+	}
+
 	copyright, err := NewCopyright(holder, year)
 	if err != nil {
 		return &License{}, err
@@ -455,6 +461,7 @@ func New(holder string, year int, licenseType LicenseType) (*License, error) {
 	}
 
 	return &License{
+		projectName:   projectName,
 		copyright:     copyright,
 		generatorFunc: generatorFunc,
 	}, nil

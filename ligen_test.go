@@ -111,6 +111,7 @@ func TestLicenseRender(t *testing.T) {
 			name: "Pass-MIT",
 			input: input{
 				holder:      "Peanut Butter",
+				projectName: "Cool",
 				year:        2025,
 				licenseType: MIT,
 			},
@@ -129,6 +130,7 @@ func TestLicenseRender(t *testing.T) {
 			name: "Pass-BSL-1.0",
 			input: input{
 				holder:      "Peanut Butter",
+				projectName: "Cool",
 				year:        2025,
 				licenseType: BOOST_1_0,
 			},
@@ -141,6 +143,7 @@ func TestLicenseRender(t *testing.T) {
 			name: "Pass-Unlicense",
 			input: input{
 				holder:      "Peanut Butter",
+				projectName: "Cool",
 				year:        2025,
 				licenseType: UNLICENSE,
 			},
@@ -153,6 +156,7 @@ func TestLicenseRender(t *testing.T) {
 			name: "Pass-Apache",
 			input: input{
 				holder:      "Peanut Butter",
+				projectName: "Cool",
 				year:        2025,
 				licenseType: APACHE_2_0,
 			},
@@ -181,7 +185,7 @@ func TestLicenseRender(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			license, _ := New(tc.input.holder, tc.input.year, tc.input.licenseType)
+			license, _ := New(tc.input.projectName, tc.input.holder, tc.input.year, tc.input.licenseType)
 
 			rendered, err := license.Render()
 			checkError(tc.errorMessage, err, t)
