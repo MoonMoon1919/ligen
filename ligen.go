@@ -147,15 +147,8 @@ type RenderOptions struct {
 	TrailingNewline bool
 }
 
-func Write(writer io.Writer, licence *License, renderOpts *RenderOptions) error {
-	content, err := licence.Render()
-	if err != nil {
-		return err
-	}
-
-	for _, writeable := range content {
-		_, err = writer.Write([]byte(writeable.content))
-	}
+func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) error {
+	_, err := writer.Write([]byte(writeable.content))
 
 	return err
 }
@@ -165,12 +158,28 @@ type FileRepository struct {
 }
 
 func (f FileRepository) Write(license *License) error {
-	file, err := os.OpenFile("LICENSE", os.O_CREATE|os.O_WRONLY, 0644)
+	writeables, err := license.Render()
 	if err != nil {
 		return err
 	}
 
-	defer file.Close()
+	renderOpts := &RenderOptions{}
 
-	return Write(file, license, &RenderOptions{})
+	write := func(writeable *Writeable, render *RenderOptions) error {
+		file, err := os.OpenFile(writeable.path, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		Write(file, writeable, render)
+
+		return nil
+	}
+
+	for _, writeable := range writeables {
+		write(&writeable, renderOpts)
+	}
+
+	return nil
 }
