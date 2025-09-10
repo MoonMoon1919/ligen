@@ -153,9 +153,7 @@ func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) er
 	return err
 }
 
-type FileRepository struct {
-	Path string
-}
+type FileRepository struct{}
 
 func (f FileRepository) Write(license *License) error {
 	writeables, err := license.Render()
