@@ -117,7 +117,7 @@ func TestLicenseRender(t *testing.T) {
 			var expected bytes.Buffer
 			MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
 
-			if rendered != expected.String() {
+			if rendered[len(rendered)-1].content != expected.String() {
 				t.Errorf("Expected %s, got %s", expected.String(), rendered)
 			}
 		})

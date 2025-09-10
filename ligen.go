@@ -81,18 +81,36 @@ const (
 	MIT LicenseType = iota + 1
 )
 
-func licenseFactory(licenseType LicenseType) (*template.Template, error) {
+type Writeable struct {
+	content string
+	path    string
+}
+
+type writeableGenerator func(cr *Copyright, dest *bytes.Buffer) ([]Writeable, error)
+
+func MITGenerator(cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
+	if err := MITTemplate.Execute(dest, cr); err != nil {
+		return nil, err
+	}
+
+	writeableSlice := make([]Writeable, 1)
+	writeableSlice[0] = Writeable{content: dest.String(), path: "LICENSE"}
+
+	return writeableSlice, nil
+}
+
+func generatorFactory(licenseType LicenseType) (writeableGenerator, error) {
 	switch licenseType {
 	case MIT:
-		return MITTemplate, nil
+		return MITGenerator, nil
 	default:
 		return nil, errors.New("Unsupported license type")
 	}
 }
 
 type License struct {
-	copyright Copyright
-	tpl       *template.Template
+	copyright     Copyright
+	generatorFunc writeableGenerator
 }
 
 func New(holder string, year int, licenseType LicenseType) (*License, error) {
@@ -101,25 +119,27 @@ func New(holder string, year int, licenseType LicenseType) (*License, error) {
 		return &License{}, err
 	}
 
-	licenseTemplate, err := licenseFactory(licenseType)
+	generatorFunc, err := generatorFactory(licenseType)
 	if err != nil {
 		return &License{}, err
 	}
 
 	return &License{
-		copyright: copyright,
-		tpl:       licenseTemplate,
+		copyright:     copyright,
+		generatorFunc: generatorFunc,
 	}, nil
 }
 
-func (l *License) Render() (string, error) {
+func (l *License) Render() ([]Writeable, error) {
 	var content bytes.Buffer
 
-	if err := l.tpl.Execute(&content, l.copyright); err != nil {
-		return "", err
+	writeable, err := l.generatorFunc(&l.copyright, &content)
+
+	if err != nil {
+		return nil, err
 	}
 
-	return content.String(), nil
+	return writeable, nil
 }
 
 // File management
@@ -133,7 +153,10 @@ func Write(writer io.Writer, licence *License, renderOpts *RenderOptions) error 
 		return err
 	}
 
-	_, err = writer.Write([]byte(content))
+	for _, writeable := range content {
+		_, err = writer.Write([]byte(writeable.content))
+	}
+
 	return err
 }
 
