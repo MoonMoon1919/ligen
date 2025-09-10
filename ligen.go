@@ -83,20 +83,20 @@ func NewCopyright(name string, year int) (Copyright, error) {
 }
 
 // License stuff
-type License struct {
-	content string
-}
-
 type LicenseType int
 
 const (
 	MIT LicenseType = iota + 1
 )
 
-func New(holder string, year int, licenseType LicenseType) (License, error) {
+type License struct {
+	content string
+}
+
+func New(holder string, year int, licenseType LicenseType) (*License, error) {
 	copyright, err := NewCopyright(holder, year)
 	if err != nil {
-		return License{}, err
+		return &License{}, err
 	}
 
 	var content bytes.Buffer
@@ -105,20 +105,20 @@ func New(holder string, year int, licenseType LicenseType) (License, error) {
 	case MIT:
 		err = MITLicense(&copyright, &content)
 	default:
-		return License{}, errors.New("Unsupported license type")
+		return &License{}, errors.New("Unsupported license type")
 	}
 
 	if err != nil {
-		return License{}, err
+		return &License{}, err
 	}
 
-	return License{
+	return &License{
 		content: content.String(),
 	}, nil
 }
 
-func Render(license *License) (string, error) {
-	return license.content, nil
+func (l *License) Render() (string, error) {
+	return l.content, nil
 }
 
 // File management
@@ -127,7 +127,7 @@ type RenderOptions struct {
 }
 
 func Write(writer io.Writer, licence *License, renderOpts *RenderOptions) error {
-	content, err := Render(licence)
+	content, err := licence.Render()
 	if err != nil {
 		return err
 	}

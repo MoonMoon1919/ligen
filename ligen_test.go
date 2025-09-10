@@ -134,7 +134,7 @@ func TestMITLicense(t *testing.T) {
 	}
 }
 
-func TestLicenseNew(t *testing.T) {
+func TestLicenseRender(t *testing.T) {
 	type input struct {
 		year   int
 		holder string
@@ -148,7 +148,9 @@ func TestLicenseNew(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			license, err := New(tc.input.holder, tc.input.year, MIT)
+			license, _ := New(tc.input.holder, tc.input.year, MIT)
+
+			rendered, err := license.Render()
 			checkError(tc.errorMessage, err, t)
 			if tc.errorMessage != "" {
 				return
@@ -157,8 +159,8 @@ func TestLicenseNew(t *testing.T) {
 			var expected bytes.Buffer
 			MITTemplate.Execute(&expected, Copyright{Year: tc.input.year, Holder: strings.TrimSpace(tc.input.holder)})
 
-			if license.content != expected.String() {
-				t.Errorf("Expected %s, got %s", expected.String(), license.content)
+			if rendered != expected.String() {
+				t.Errorf("Expected %s, got %s", expected.String(), rendered)
 			}
 		})
 	}
