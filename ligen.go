@@ -19,10 +19,6 @@ Checking -
 - Answer "what license is in this repo?"
 */
 
-func renderLicense(copyright *Copyright, dest *bytes.Buffer, tpl *template.Template) error {
-	return tpl.Execute(dest, copyright)
-}
-
 // MIT
 // Body of text for an MIT License
 const MitTemplateBody = `
@@ -36,10 +32,6 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 `
 
 var MITTemplate = template.Must(template.New("MIT").Parse(MitTemplateBody))
-
-func MITLicense(copyright *Copyright, dest *bytes.Buffer) error {
-	return renderLicense(copyright, dest, MITTemplate)
-}
 
 // General use copyright line
 var (
@@ -89,8 +81,18 @@ const (
 	MIT LicenseType = iota + 1
 )
 
+func licenseFactory(licenseType LicenseType) (*template.Template, error) {
+	switch licenseType {
+	case MIT:
+		return MITTemplate, nil
+	default:
+		return nil, errors.New("Unsupported license type")
+	}
+}
+
 type License struct {
-	content string
+	copyright Copyright
+	tpl       *template.Template
 }
 
 func New(holder string, year int, licenseType LicenseType) (*License, error) {
@@ -99,26 +101,25 @@ func New(holder string, year int, licenseType LicenseType) (*License, error) {
 		return &License{}, err
 	}
 
-	var content bytes.Buffer
-
-	switch licenseType {
-	case MIT:
-		err = MITLicense(&copyright, &content)
-	default:
-		return &License{}, errors.New("Unsupported license type")
-	}
-
+	licenseTemplate, err := licenseFactory(licenseType)
 	if err != nil {
 		return &License{}, err
 	}
 
 	return &License{
-		content: content.String(),
+		copyright: copyright,
+		tpl:       licenseTemplate,
 	}, nil
 }
 
 func (l *License) Render() (string, error) {
-	return l.content, nil
+	var content bytes.Buffer
+
+	if err := l.tpl.Execute(&content, l.copyright); err != nil {
+		return "", err
+	}
+
+	return content.String(), nil
 }
 
 // File management
