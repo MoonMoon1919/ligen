@@ -23,7 +23,7 @@ Checking -
 // Body of text for an MIT License
 const MitTemplateBody = `MIT License
 
-Copyright (c) {{.Year}} {{.Holder}}
+Copyright (c) {{.StartYear}}{{if (gt .EndYear 0) }}-{{.EndYear}}{{end}} {{.Holder}}
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -291,7 +291,7 @@ const ApacheTemplateBody = `                               Apache License
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright {{.Year}} {{.Holder}}
+   Copyright {{.StartYear}}{{if (gt .EndYear 0) }}-{{.EndYear}}{{end}} {{.Holder}}
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -853,12 +853,12 @@ Library.
 
 // NOTICES
 const SimpleNoticeTemplateBody = `{{.ProjectName}}
-Copyright {{.Year}} {{.Holder}}`
+Copyright {{.StartYear}}{{if (gt .EndYear 0) }}-{{.EndYear}}{{end}} {{.Holder}}`
 
 var SimpleNoticeTemplate = template.Must(template.New("SimpleNotice").Parse(SimpleNoticeTemplateBody))
 
 const GnuLesserNoticeTemplateBody = `{{.ProjectName}}
-Copyright (C) {{.Year}} {{.Holder}}
+Copyright (C) {{.StartYear}}{{if eq .EndYear 0 }}-{{.EndYear}}{{end}} {{.Holder}}
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -879,14 +879,16 @@ var GnuLesserNoticeTemplate = template.Must(template.New("GnuLesserNotice").Pars
 type NoticeInput struct {
 	ProjectName string
 	Holder      string
-	Year        int
+	StartYear   int
+	EndYear     int
 }
 
 // General use copyright line
 var (
-	InvalidYearError = errors.New("Invalid year")
-	EmptyNameError   = errors.New("Name must not be empty")
-	NameTooLongError = errors.New("Name must be 128 chars")
+	InvalidYearError      = errors.New("Invalid year")
+	EmptyNameError        = errors.New("Name must not be empty")
+	NameTooLongError      = errors.New("Name must be 128 chars")
+	InvalidYearRangeError = errors.New("End year must be greater than start year")
 )
 
 const (
@@ -899,15 +901,16 @@ const (
 )
 
 type Copyright struct {
-	Holder string
-	Year   int
+	Holder    string
+	StartYear int
+	EndYear   int
 }
 
-func NewCopyright(name string, year int) (Copyright, error) {
+func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 	currentYear := time.Now().Year()
 	fiftyYearsAgo := currentYear - MAX_YEARS_PAST
 
-	if year > currentYear || year < fiftyYearsAgo {
+	if startYear > currentYear || startYear < fiftyYearsAgo {
 		return Copyright{}, InvalidYearError
 	}
 
@@ -920,7 +923,19 @@ func NewCopyright(name string, year int) (Copyright, error) {
 		return Copyright{}, NameTooLongError
 	}
 
-	return Copyright{Holder: name, Year: year}, nil
+	if endYear != 0 {
+		if endYear < startYear {
+			return Copyright{}, InvalidYearRangeError
+		}
+
+		if endYear < currentYear {
+			return Copyright{}, InvalidYearError
+		}
+
+		return Copyright{Holder: name, StartYear: startYear, EndYear: endYear}, nil
+	}
+
+	return Copyright{Holder: name, StartYear: startYear}, nil
 }
 
 // License Generators
@@ -959,7 +974,7 @@ func ApacheGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
-	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, Year: cr.Year, Holder: cr.Holder}); err != nil {
+	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{content: dest.String(), path: "NOTICE"}
@@ -973,7 +988,7 @@ func MozillaGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
-	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, Year: cr.Year, Holder: cr.Holder}); err != nil {
+	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{content: dest.String(), path: "NOTICE"}
@@ -986,7 +1001,7 @@ func GNULesserGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) 
 	writeableSlice[0] = Writeable{content: GNULesserLicenseBody, path: "COPYING.LESSER"}
 
 	dest.Reset()
-	if err := GnuLesserNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, Year: cr.Year, Holder: cr.Holder}); err != nil {
+	if err := GnuLesserNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{content: dest.String(), path: "NOTICE"}
@@ -1039,14 +1054,14 @@ type License struct {
 	generatorFunc writeableGenerator
 }
 
-func New(projectName string, holder string, year int, licenseType LicenseType) (*License, error) {
+func New(projectName string, holder string, startYear int, endYear int, licenseType LicenseType) (*License, error) {
 	projectName = strings.TrimSpace(projectName)
 
 	if len(projectName) == 0 {
 		return &License{}, errors.New("Project name must have at least 1 character")
 	}
 
-	copyright, err := NewCopyright(holder, year)
+	copyright, err := NewCopyright(holder, startYear, endYear)
 	if err != nil {
 		return &License{}, err
 	}
