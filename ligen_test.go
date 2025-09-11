@@ -272,7 +272,7 @@ func TestLicenseRender(t *testing.T) {
 
 			renderedConent := make([]string, len(rendered))
 			for idx, render := range rendered {
-				renderedConent[idx] = render.content
+				renderedConent[idx] = render.Content
 			}
 
 			if !reflect.DeepEqual(expected, renderedConent) {
