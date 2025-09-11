@@ -172,7 +172,7 @@ func TestLicenseRender(t *testing.T) {
 				expected[0] = dest.String()
 
 				dest.Reset()
-				if err := NoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
+				if err := SimpleNoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: strings.TrimSpace(in.holder)}); err != nil {
 					return nil, err
 				}
 
@@ -196,7 +196,30 @@ func TestLicenseRender(t *testing.T) {
 
 				// Reset the buffer so we can re-use it
 				var dest bytes.Buffer
-				if err := NoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: in.holder}); err != nil {
+				if err := SimpleNoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: in.holder}); err != nil {
+					return nil, err
+				}
+				expected[1] = dest.String()
+
+				return expected, nil
+			},
+		},
+		{
+			name: "Pass-GNU Lesser GPL 3.0",
+			input: input{
+				holder:      "Peanut Butter",
+				projectName: "Cool",
+				year:        2025,
+				licenseType: GNU_LESSER_3_0,
+			},
+			errorMessage: "",
+			expectedBuilder: func(in input) ([]string, error) {
+				expected := make([]string, 2)
+				expected[0] = GNULesserLicenseBody
+
+				// Reset the buffer so we can re-use it
+				var dest bytes.Buffer
+				if err := GnuLesserNoticeTemplate.Execute(&dest, &NoticeInput{ProjectName: in.projectName, Year: in.year, Holder: in.holder}); err != nil {
 					return nil, err
 				}
 				expected[1] = dest.String()
