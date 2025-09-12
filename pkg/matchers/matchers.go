@@ -2,8 +2,13 @@ package matchers
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/MoonMoon1919/ligen"
+)
+
+var (
+	DetectionFailedError = errors.New("License detection failed")
 )
 
 type exists struct{}
@@ -26,7 +31,7 @@ func (b biggrams) len() int {
 	return len(b)
 }
 
-func newBigram(s string) biggrams {
+func newBigrams(s string) biggrams {
 	bg := make(biggrams)
 
 	for i := 0; i < len(s)-1; i++ {
@@ -37,8 +42,8 @@ func newBigram(s string) biggrams {
 }
 
 func SorensonDiceCoefficient(left, right string) float64 {
-	bigramsleft := newBigram(left)
-	bigramsright := newBigram(right)
+	bigramsleft := newBigrams(left)
+	bigramsright := newBigrams(right)
 
 	intersection := bigramsleft.intersection(bigramsright)
 
@@ -52,6 +57,54 @@ func SorensonDiceCoefficient(left, right string) float64 {
 	return numerator / denominator
 }
 
-func Match(content string) (ligen.LicenseType, error) {
-	return ligen.LicenseType(-1), errors.New("Detection failed")
+type score struct {
+	licenseType ligen.LicenseType
+	distance    float64
+}
+
+func Match(content string, threshold float64) (ligen.LicenseType, error) {
+	knownLicenseTypes := ligen.AllLicensesTypes()
+	scores := make([]score, len(knownLicenseTypes))
+
+	for idx, licenseType := range knownLicenseTypes {
+		distance, err := licenseType.Compare(content, SorensonDiceCoefficient)
+
+		if err != nil {
+			return ligen.LicenseType(-1), errors.New("Detection failed")
+		}
+
+		// If the coefficient is 1, it's an exect match
+		// so don't bother iterating through the rest
+		if distance == 1 {
+			return licenseType, nil
+		}
+
+		scores[idx] = score{licenseType: licenseType, distance: distance}
+	}
+
+	slices.SortFunc(scores, func(a, b score) int {
+		adst := a.distance
+		bdst := b.distance
+
+		if adst > bdst {
+			return 1
+		}
+
+		if a == b {
+			return 0
+		}
+
+		// a < b
+		return -1
+	})
+
+	// The last item in the slice has the highest coefficient
+	// thus is the most similar, so we select it to see if
+	// the match exceeds our threshold
+	bestMatch := scores[len(scores)-1]
+	if bestMatch.distance < threshold {
+		return ligen.LicenseType(-1), DetectionFailedError
+	}
+
+	return bestMatch.licenseType, nil
 }

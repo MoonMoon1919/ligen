@@ -1021,6 +1021,17 @@ const (
 	GNU_LESSER_3_0
 )
 
+func AllLicensesTypes() []LicenseType {
+	return []LicenseType{
+		MIT,
+		BOOST_1_0,
+		UNLICENSE,
+		APACHE_2_0,
+		MOZILLA_2_0,
+		GNU_LESSER_3_0,
+	}
+}
+
 type Writeable struct {
 	Content string
 	path    string
@@ -1028,8 +1039,36 @@ type Writeable struct {
 
 type WriteableGenerator func(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error)
 
-func generatorFactory(licenseType LicenseType) (WriteableGenerator, error) {
-	switch licenseType {
+func (lt LicenseType) Template() (string, error) {
+	switch lt {
+	case MIT:
+		return MitTemplateBody, nil
+	case BOOST_1_0:
+		return BoostBody, nil
+	case UNLICENSE:
+		return UnlicenseBody, nil
+	case APACHE_2_0:
+		return ApacheTemplateBody, nil
+	case MOZILLA_2_0:
+		return MozillaLicenseBody, nil
+	case GNU_LESSER_3_0:
+		return GNULesserLicenseBody, nil
+	default:
+		return "", errors.New("No template")
+	}
+}
+
+func (lt LicenseType) Compare(left string, comparisonFunc func(left, right string) float64) (float64, error) {
+	tmp, err := lt.Template()
+	if err != nil {
+		return 0.0, err
+	}
+
+	return comparisonFunc(left, tmp), nil
+}
+
+func (lt LicenseType) GeneratorFunc() (WriteableGenerator, error) {
+	switch lt {
 	case MIT:
 		return MITGenerator, nil
 	case BOOST_1_0:
@@ -1065,7 +1104,7 @@ func New(projectName string, holder string, startYear int, endYear int, licenseT
 		return &License{}, err
 	}
 
-	generatorFunc, err := generatorFactory(licenseType)
+	generatorFunc, err := licenseType.GeneratorFunc()
 	if err != nil {
 		return &License{}, err
 	}

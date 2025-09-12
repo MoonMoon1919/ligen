@@ -7,6 +7,17 @@ import (
 	"github.com/MoonMoon1919/ligen"
 )
 
+func checkError(expected string, received error, t *testing.T) {
+	var errMsg string
+	if received != nil {
+		errMsg = received.Error()
+	}
+
+	if expected != errMsg {
+		t.Errorf("Expected error %s, got %s", expected, errMsg)
+	}
+}
+
 func buildInput(f ligen.WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) (string, error) {
 	cr, err := ligen.NewCopyright(holder, startYear, endYear)
 	if err != nil {
@@ -89,6 +100,100 @@ func TestSorensonDiceCoefficient(t *testing.T) {
 			coefficient := SorensonDiceCoefficient(left, right)
 
 			tc.validatorFunc(t, coefficient, tc.threshold)
+		})
+	}
+}
+
+func TestMatch(t *testing.T) {
+	passingThreshold := 0.90
+
+	// Convenience method for building passing inputs to avoid duplicating the same
+	// input builder func in every passing case
+	inputBuilder := func(t *testing.T, lt ligen.LicenseType) string {
+		var buf bytes.Buffer
+		generatorFunc, _ := lt.GeneratorFunc()
+		builtLicense, err := buildInput(generatorFunc, "Ligen", "Max Moon", 2025, 2025, &buf)
+		if err != nil {
+			t.FailNow()
+		}
+
+		buf.Reset()
+
+		return builtLicense
+	}
+
+	tests := []struct {
+		name         string
+		inputBuilder func(t *testing.T, lt ligen.LicenseType) string
+		expected     ligen.LicenseType
+		threshold    float64
+		errorMessage string
+	}{
+		{
+			name:         "Pass-MatchFound-MIT",
+			inputBuilder: inputBuilder,
+			expected:     ligen.MIT,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name:         "Pass-MatchFound-Apache",
+			inputBuilder: inputBuilder,
+			expected:     ligen.APACHE_2_0,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name:         "Pass-MatchFound-Boost",
+			inputBuilder: inputBuilder,
+			expected:     ligen.BOOST_1_0,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name:         "Pass-MatchFound-Unlicense",
+			inputBuilder: inputBuilder,
+			expected:     ligen.UNLICENSE,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name:         "Pass-MatchFound-Mozilla",
+			inputBuilder: inputBuilder,
+			expected:     ligen.MOZILLA_2_0,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name:         "Pass-MatchFound-GnuLesser",
+			inputBuilder: inputBuilder,
+			expected:     ligen.GNU_LESSER_3_0,
+			threshold:    passingThreshold,
+			errorMessage: "",
+		},
+		{
+			name: "Fail-NoMatchFound",
+			inputBuilder: func(t *testing.T, lt ligen.LicenseType) string {
+				return "The dog likes to jump and play."
+			},
+			expected:     ligen.LicenseType(-1),
+			threshold:    passingThreshold,
+			errorMessage: DetectionFailedError.Error(),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			discoveredType, err := Match(tc.inputBuilder(t, tc.expected), tc.threshold)
+
+			checkError(tc.errorMessage, err, t)
+			if tc.errorMessage != "" {
+				return
+			}
+
+			if discoveredType != tc.expected {
+				t.Errorf("Expected to find license type %d, found %d", tc.expected, discoveredType)
+			}
 		})
 	}
 }
