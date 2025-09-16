@@ -937,6 +937,14 @@ func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 	return Copyright{Holder: name, StartYear: startYear}, nil
 }
 
+func (c *Copyright) Validate() error {
+	if c.EndYear < c.StartYear {
+		return errors.New("start year must come before end year")
+	}
+
+	return nil
+}
+
 // License Generators
 func MITGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	if err := MITTemplate.Execute(dest, cr); err != nil {
@@ -987,7 +995,7 @@ func MozillaGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
-	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
+	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, EndYear: cr.EndYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{Content: dest.String(), path: "NOTICE"}
@@ -1000,7 +1008,7 @@ func GNULesserGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) 
 	writeableSlice[0] = Writeable{Content: GNULesserLicenseBody, path: "COPYING.LESSER"}
 
 	dest.Reset()
-	if err := GnuLesserNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
+	if err := GnuLesserNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, EndYear: cr.EndYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{Content: dest.String(), path: "NOTICE"}
