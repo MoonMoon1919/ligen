@@ -945,6 +945,26 @@ func (c *Copyright) Validate() error {
 	return nil
 }
 
+func (c *Copyright) SetStartYear(year int) error {
+	if year > c.EndYear {
+		return errors.New("start year must come before end year")
+	}
+
+	c.StartYear = year
+
+	return nil
+}
+
+func (c *Copyright) SetEndYear(year int) error {
+	if year > c.EndYear {
+		return errors.New("start year must come before end year")
+	}
+
+	c.EndYear = year
+
+	return nil
+}
+
 // License Generators
 func MITGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	if err := MITTemplate.Execute(dest, cr); err != nil {
@@ -1134,6 +1154,14 @@ func (l *License) Render() ([]Writeable, error) {
 	}
 
 	return writeable, nil
+}
+
+func (l *License) SetCopyrightEndYear(year int) error {
+	return l.copyright.SetEndYear(year)
+}
+
+func (l *License) SetCopyrightStartYear(year int) error {
+	return l.copyright.SetStartYear(year)
 }
 
 // File management
