@@ -1,7 +1,6 @@
 package ligen
 
 import (
-	"fmt"
 	"io"
 	"os"
 )
@@ -17,42 +16,28 @@ func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) er
 	return err
 }
 
-func Load(reader io.Reader, license *License) error {
+type licenseLoadResult struct {
+	licenseType LicenseType
+	content     string
+}
+
+func loadLicense(reader io.Reader) (licenseLoadResult, error) {
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return err
+		return licenseLoadResult{}, err
 	}
 
 	contentString := string(content)
 
 	licenseType, err := Match(contentString, 0.90)
 	if err != nil {
-		return err
+		return licenseLoadResult{}, err
 	}
 
-	if licenseType.RequiresNotice() {
-		fmt.Print("License requires notice")
-	}
-
-	copyright, err := ParseDoc(contentString)
-	if err != nil {
-		return err
-	}
-
-	// Set it up
-	license.SetCopyrightStartYear(copyright.StartYear)
-
-	if copyright.EndYear != 0 {
-		license.SetCopyrightEndYear(copyright.EndYear)
-	}
-
-	license.SetHolder(copyright.Holder)
-
-	if err = license.SetLicenseType(licenseType); err != nil {
-		return err
-	}
-
-	return nil
+	return licenseLoadResult{
+		licenseType: licenseType,
+		content:     contentString,
+	}, nil
 }
 
 type FileRepository struct{}
@@ -64,7 +49,40 @@ func (f FileRepository) Load(path string, license *License) error {
 	}
 
 	defer file.Close()
-	return Load(file, license)
+	result, err := loadLicense(file)
+	if err != nil {
+		return err
+	}
+
+	var copyright Copyright
+
+	if result.licenseType.RequiresNotice() {
+		noticeFile, err := os.OpenFile("NOTICE", os.O_RDONLY, 0644)
+		if err != nil {
+			return err
+		}
+
+		noticeContent, err := io.ReadAll(noticeFile)
+		if err != nil {
+			return err
+		}
+		copyright, err = ParseDoc(string(noticeContent))
+		if err != nil {
+			return err
+		}
+	} else {
+		copyright, err = ParseDoc(result.content)
+		if err != nil {
+			return err
+		}
+	}
+
+	// TODO: Set project name from notice, since that's the only place it is set
+	license.projectName = ""
+	license.copyright = copyright
+	license.SetLicenseType(result.licenseType)
+
+	return nil
 }
 
 func (f FileRepository) Write(license *License) error {
