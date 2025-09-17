@@ -1,10 +1,8 @@
-package matchers
+package ligen
 
 import (
 	"errors"
 	"slices"
-
-	"github.com/MoonMoon1919/ligen"
 )
 
 var (
@@ -58,19 +56,19 @@ func SorensonDiceCoefficient(left, right string) float64 {
 }
 
 type score struct {
-	licenseType ligen.LicenseType
+	licenseType LicenseType
 	distance    float64
 }
 
-func Match(content string, threshold float64) (ligen.LicenseType, error) {
-	knownLicenseTypes := ligen.AllLicensesTypes()
+func Match(content string, threshold float64) (LicenseType, error) {
+	knownLicenseTypes := AllLicensesTypes()
 	scores := make([]score, len(knownLicenseTypes))
 
 	for idx, licenseType := range knownLicenseTypes {
 		distance, err := licenseType.Compare(content, SorensonDiceCoefficient)
 
 		if err != nil {
-			return ligen.LicenseType(-1), errors.New("Detection failed")
+			return LicenseType(-1), errors.New("Detection failed")
 		}
 
 		// If the coefficient is 1, it's an exect match
@@ -103,7 +101,7 @@ func Match(content string, threshold float64) (ligen.LicenseType, error) {
 	// the match exceeds our threshold
 	bestMatch := scores[len(scores)-1]
 	if bestMatch.distance < threshold {
-		return ligen.LicenseType(-1), DetectionFailedError
+		return LicenseType(-1), DetectionFailedError
 	}
 
 	return bestMatch.licenseType, nil

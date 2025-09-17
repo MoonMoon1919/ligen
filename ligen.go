@@ -3,8 +3,6 @@ package ligen
 import (
 	"bytes"
 	"errors"
-	"io"
-	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -972,21 +970,24 @@ func MITGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Wri
 	}
 
 	writeableSlice := make([]Writeable, 1)
-	writeableSlice[0] = Writeable{Content: dest.String(), path: "LICENSE"}
+	writeableSlice[0] = Writeable{Content: dest.String(), Path: "LICENSE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
 
 func BoostGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 1)
-	writeableSlice[0] = Writeable{Content: BoostBody, path: "LICENSE"}
+	writeableSlice[0] = Writeable{Content: BoostBody, Path: "LICENSE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
 
 func UnlicenseGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 1)
-	writeableSlice[0] = Writeable{Content: UnlicenseBody, path: "UNLICENSE"}
+	writeableSlice[0] = Writeable{Content: UnlicenseBody, Path: "UNLICENSE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
@@ -997,41 +998,44 @@ func ApacheGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]
 	}
 
 	writeableSlice := make([]Writeable, 2)
-	writeableSlice[0] = Writeable{Content: dest.String(), path: "LICENSE"}
+	writeableSlice[0] = Writeable{Content: dest.String(), Path: "LICENSE"}
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
 	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
-	writeableSlice[1] = Writeable{Content: dest.String(), path: "NOTICE"}
+	writeableSlice[1] = Writeable{Content: dest.String(), Path: "NOTICE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
 
 func MozillaGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 2)
-	writeableSlice[0] = Writeable{Content: MozillaLicenseBody, path: "LICENSE"}
+	writeableSlice[0] = Writeable{Content: MozillaLicenseBody, Path: "LICENSE"}
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
 	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, EndYear: cr.EndYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
-	writeableSlice[1] = Writeable{Content: dest.String(), path: "NOTICE"}
+	writeableSlice[1] = Writeable{Content: dest.String(), Path: "NOTICE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
 
 func GNULesserGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 2)
-	writeableSlice[0] = Writeable{Content: GNULesserLicenseBody, path: "COPYING.LESSER"}
+	writeableSlice[0] = Writeable{Content: GNULesserLicenseBody, Path: "COPYING.LESSER"}
 
 	dest.Reset()
 	if err := GnuLesserNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, EndYear: cr.EndYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
-	writeableSlice[1] = Writeable{Content: dest.String(), path: "NOTICE"}
+	writeableSlice[1] = Writeable{Content: dest.String(), Path: "NOTICE"}
+	dest.Reset()
 
 	return writeableSlice, nil
 }
@@ -1062,7 +1066,7 @@ func AllLicensesTypes() []LicenseType {
 
 type Writeable struct {
 	Content string
-	path    string
+	Path    string
 }
 
 type WriteableGenerator func(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error)
@@ -1114,6 +1118,15 @@ func (lt LicenseType) GeneratorFunc() (WriteableGenerator, error) {
 	}
 }
 
+func (lt LicenseType) RequiresNotice() bool {
+	switch lt {
+	case MOZILLA_2_0, GNU_LESSER_3_0, APACHE_2_0:
+		return true
+	default:
+		return false
+	}
+}
+
 type License struct {
 	projectName   string
 	copyright     Copyright
@@ -1156,6 +1169,11 @@ func (l *License) Render() ([]Writeable, error) {
 	return writeable, nil
 }
 
+func (l *License) SetHolder(holder string) error {
+	l.copyright.Holder = holder
+	return nil
+}
+
 func (l *License) SetCopyrightEndYear(year int) error {
 	return l.copyright.SetEndYear(year)
 }
@@ -1164,42 +1182,13 @@ func (l *License) SetCopyrightStartYear(year int) error {
 	return l.copyright.SetStartYear(year)
 }
 
-// File management
-type RenderOptions struct {
-	TrailingNewline bool
-}
-
-func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) error {
-	_, err := writer.Write([]byte(writeable.Content))
-
-	return err
-}
-
-type FileRepository struct{}
-
-func (f FileRepository) Write(license *License) error {
-	writeables, err := license.Render()
+func (l *License) SetLicenseType(licenseType LicenseType) error {
+	generator, err := licenseType.GeneratorFunc()
 	if err != nil {
 		return err
 	}
 
-	renderOpts := &RenderOptions{}
-
-	write := func(writeable *Writeable, render *RenderOptions) error {
-		file, err := os.OpenFile(writeable.path, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		Write(file, writeable, render)
-
-		return nil
-	}
-
-	for _, writeable := range writeables {
-		write(&writeable, renderOpts)
-	}
+	l.generatorFunc = generator
 
 	return nil
 }

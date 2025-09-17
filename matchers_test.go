@@ -1,25 +1,12 @@
-package matchers
+package ligen
 
 import (
 	"bytes"
 	"testing"
-
-	"github.com/MoonMoon1919/ligen"
 )
 
-func checkError(expected string, received error, t *testing.T) {
-	var errMsg string
-	if received != nil {
-		errMsg = received.Error()
-	}
-
-	if expected != errMsg {
-		t.Errorf("Expected error %s, got %s", expected, errMsg)
-	}
-}
-
-func buildInput(f ligen.WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) (string, error) {
-	cr, err := ligen.NewCopyright(holder, startYear, endYear)
+func buildInput(f WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) (string, error) {
+	cr, err := NewCopyright(holder, startYear, endYear)
 	if err != nil {
 		return "", err
 	}
@@ -44,14 +31,14 @@ func TestSorensonDiceCoefficient(t *testing.T) {
 			inputBuilder: func(t *testing.T) (string, string) {
 				var dest bytes.Buffer
 
-				left, err := buildInput(ligen.MITGenerator, "example", "Peanut butter", 2024, 2025, &dest)
+				left, err := buildInput(MITGenerator, "example", "Peanut butter", 2024, 2025, &dest)
 				if err != nil {
 					t.FailNow()
 				}
 
 				dest.Reset()
 
-				right, err := buildInput(ligen.MITGenerator, "Ligen", "Max Moon", 2025, 2025, &dest)
+				right, err := buildInput(MITGenerator, "Ligen", "Max Moon", 2025, 2025, &dest)
 				if err != nil {
 					t.FailNow()
 				}
@@ -70,14 +57,14 @@ func TestSorensonDiceCoefficient(t *testing.T) {
 			inputBuilder: func(t *testing.T) (string, string) {
 				var dest bytes.Buffer
 
-				left, err := buildInput(ligen.MITGenerator, "example", "Peanut butter", 2024, 2025, &dest)
+				left, err := buildInput(MITGenerator, "example", "Peanut butter", 2024, 2025, &dest)
 				if err != nil {
 					t.FailNow()
 				}
 
 				dest.Reset()
 
-				right, err := buildInput(ligen.ApacheGenerator, "Ligen", "Max Moon", 2025, 2025, &dest)
+				right, err := buildInput(ApacheGenerator, "Ligen", "Max Moon", 2025, 2025, &dest)
 				if err != nil {
 					t.FailNow()
 				}
@@ -109,7 +96,7 @@ func TestMatch(t *testing.T) {
 
 	// Convenience method for building passing inputs to avoid duplicating the same
 	// input builder func in every passing case
-	inputBuilder := func(t *testing.T, lt ligen.LicenseType) string {
+	inputBuilder := func(t *testing.T, lt LicenseType) string {
 		var buf bytes.Buffer
 		generatorFunc, _ := lt.GeneratorFunc()
 		builtLicense, err := buildInput(generatorFunc, "Ligen", "Max Moon", 2025, 2025, &buf)
@@ -124,59 +111,59 @@ func TestMatch(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		inputBuilder func(t *testing.T, lt ligen.LicenseType) string
-		expected     ligen.LicenseType
+		inputBuilder func(t *testing.T, lt LicenseType) string
+		expected     LicenseType
 		threshold    float64
 		errorMessage string
 	}{
 		{
 			name:         "Pass-MatchFound-MIT",
 			inputBuilder: inputBuilder,
-			expected:     ligen.MIT,
+			expected:     MIT,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name:         "Pass-MatchFound-Apache",
 			inputBuilder: inputBuilder,
-			expected:     ligen.APACHE_2_0,
+			expected:     APACHE_2_0,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name:         "Pass-MatchFound-Boost",
 			inputBuilder: inputBuilder,
-			expected:     ligen.BOOST_1_0,
+			expected:     BOOST_1_0,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name:         "Pass-MatchFound-Unlicense",
 			inputBuilder: inputBuilder,
-			expected:     ligen.UNLICENSE,
+			expected:     UNLICENSE,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name:         "Pass-MatchFound-Mozilla",
 			inputBuilder: inputBuilder,
-			expected:     ligen.MOZILLA_2_0,
+			expected:     MOZILLA_2_0,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name:         "Pass-MatchFound-GnuLesser",
 			inputBuilder: inputBuilder,
-			expected:     ligen.GNU_LESSER_3_0,
+			expected:     GNU_LESSER_3_0,
 			threshold:    passingThreshold,
 			errorMessage: "",
 		},
 		{
 			name: "Fail-NoMatchFound",
-			inputBuilder: func(t *testing.T, lt ligen.LicenseType) string {
+			inputBuilder: func(t *testing.T, lt LicenseType) string {
 				return "The dog likes to jump and play."
 			},
-			expected:     ligen.LicenseType(-1),
+			expected:     LicenseType(-1),
 			threshold:    passingThreshold,
 			errorMessage: DetectionFailedError.Error(),
 		},

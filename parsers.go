@@ -1,4 +1,4 @@
-package parsers
+package ligen
 
 import (
 	"bufio"
@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/MoonMoon1919/ligen"
 )
 
 var (
@@ -16,7 +14,7 @@ var (
 	copyrightNotFoundError = errors.New("no copyright line found")
 )
 
-func ParseDoc(content string) (ligen.Copyright, error) {
+func ParseDoc(content string) (Copyright, error) {
 	reader := strings.NewReader(content)
 	scanner := bufio.NewScanner(reader)
 
@@ -29,10 +27,10 @@ func ParseDoc(content string) (ligen.Copyright, error) {
 		}
 	}
 
-	return ligen.Copyright{}, copyrightNotFoundError
+	return Copyright{}, copyrightNotFoundError
 }
 
-func ParseCopyright(line string) (ligen.Copyright, error) {
+func ParseCopyright(line string) (Copyright, error) {
 	line = strings.TrimSpace(line)
 
 	pattern := `^Copyright\s*(?:\([Cc]\)\s*)?(\d{4})(?:-(\d{4}))?\s+(.+?)\s*$`
@@ -41,13 +39,13 @@ func ParseCopyright(line string) (ligen.Copyright, error) {
 
 	matches := re.FindStringSubmatch(line)
 	if matches == nil {
-		return ligen.Copyright{}, noMatchError
+		return Copyright{}, noMatchError
 	}
 
 	// Parse StartYear (should always be present)
 	startYear, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return ligen.Copyright{}, fmt.Errorf("invalid start year: %s", matches[1])
+		return Copyright{}, fmt.Errorf("invalid start year: %s", matches[1])
 	}
 
 	// Parse EndYear (optional)
@@ -55,20 +53,20 @@ func ParseCopyright(line string) (ligen.Copyright, error) {
 	if matches[2] != "" {
 		endYear, err = strconv.Atoi(matches[2])
 		if err != nil {
-			return ligen.Copyright{}, fmt.Errorf("invalid end year: %s", matches[2])
+			return Copyright{}, fmt.Errorf("invalid end year: %s", matches[2])
 		}
 	}
 
 	holder := matches[3]
 
-	license := ligen.Copyright{
+	license := Copyright{
 		Holder:    holder,
 		StartYear: startYear,
 		EndYear:   endYear,
 	}
 
 	if err := license.Validate(); err != nil {
-		return ligen.Copyright{}, err
+		return Copyright{}, err
 	}
 
 	return license, nil

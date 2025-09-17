@@ -1,40 +1,27 @@
-package parsers
+package ligen
 
 import (
 	"bytes"
 	"reflect"
 	"testing"
-
-	"github.com/MoonMoon1919/ligen"
 )
 
-func checkError(expected string, received error, t *testing.T) {
-	var errMsg string
-	if received != nil {
-		errMsg = received.Error()
-	}
-
-	if expected != errMsg {
-		t.Errorf("Expected error %s, got %s", expected, errMsg)
-	}
-}
-
-func buildInput(f ligen.WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) ([]ligen.Writeable, error) {
-	cr, err := ligen.NewCopyright(holder, startYear, endYear)
-	if err != nil {
-		return nil, err
-	}
-
-	writeable, err := f(&projectName, &cr, dest)
-	if err != nil {
-		return nil, err
-	}
-
-	return writeable, nil
-}
-
 func TestParseDoc(t *testing.T) {
-	builder := func(t *testing.T, lt ligen.LicenseType, startYear, endYear int, holder string) []ligen.Writeable {
+	buildInput := func(f WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) ([]Writeable, error) {
+		cr, err := NewCopyright(holder, startYear, endYear)
+		if err != nil {
+			return nil, err
+		}
+
+		writeable, err := f(&projectName, &cr, dest)
+		if err != nil {
+			return nil, err
+		}
+
+		return writeable, nil
+	}
+
+	builder := func(t *testing.T, lt LicenseType, startYear, endYear int, holder string) []Writeable {
 		var buf bytes.Buffer
 		generatorFunc, _ := lt.GeneratorFunc()
 		builtLicense, err := buildInput(generatorFunc, "Ligen", holder, startYear, endYear, &buf)
@@ -52,7 +39,7 @@ func TestParseDoc(t *testing.T) {
 		holder      string
 		startYear   int
 		endYear     int
-		licenseType ligen.LicenseType
+		licenseType LicenseType
 	}
 
 	commonInput := input{
@@ -70,7 +57,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-MIT",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, ligen.MIT, startYear, endYear, holder)
+				docs := builder(t, MIT, startYear, endYear, holder)
 				return docs[0].Content
 			},
 			input:        commonInput,
@@ -79,7 +66,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-Apache_2_0",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, ligen.APACHE_2_0, startYear, endYear, holder)
+				docs := builder(t, APACHE_2_0, startYear, endYear, holder)
 				return docs[0].Content
 			},
 			input:        commonInput,
@@ -88,7 +75,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-Mozilla",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, ligen.MOZILLA_2_0, startYear, endYear, holder)
+				docs := builder(t, MOZILLA_2_0, startYear, endYear, holder)
 				return docs[1].Content
 			},
 			input:        commonInput,
@@ -97,7 +84,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-GNULesser",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, ligen.GNU_LESSER_3_0, startYear, endYear, holder)
+				docs := builder(t, GNU_LESSER_3_0, startYear, endYear, holder)
 				return docs[1].Content
 			},
 			input:        commonInput,
@@ -120,7 +107,7 @@ func TestParseDoc(t *testing.T) {
 				return
 			}
 
-			expectedOutput := ligen.Copyright{
+			expectedOutput := Copyright{
 				Holder:    tc.input.holder,
 				StartYear: tc.input.startYear,
 				EndYear:   tc.input.endYear,
@@ -137,7 +124,7 @@ func TestParseCopyright(t *testing.T) {
 	tests := []struct {
 		name           string
 		inputBuilder   func() string
-		expectedOutput ligen.Copyright
+		expectedOutput Copyright
 		errorMessage   string
 	}{
 		{
@@ -145,7 +132,7 @@ func TestParseCopyright(t *testing.T) {
 			inputBuilder: func() string {
 				return "Copyright (C) 2024-2025 Max Moon"
 			},
-			expectedOutput: ligen.Copyright{
+			expectedOutput: Copyright{
 				Holder:    "Max Moon",
 				StartYear: 2024,
 				EndYear:   2025,
@@ -157,7 +144,7 @@ func TestParseCopyright(t *testing.T) {
 			inputBuilder: func() string {
 				return "Copyright (C) LALA-L000 Max Moon"
 			},
-			expectedOutput: ligen.Copyright{},
+			expectedOutput: Copyright{},
 			errorMessage:   noMatchError.Error(),
 		},
 	}
