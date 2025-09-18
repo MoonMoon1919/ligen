@@ -98,14 +98,14 @@ func Load(license *License, licenseLoader loader, noticeLoader loader) error {
 }
 
 func loadFile(path string) (io.Reader, error) {
-	noticeFile, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	defer noticeFile.Close()
+	defer f.Close()
 
-	return noticeFile, nil
+	return f, nil
 }
 
 type FileRepository struct{}

@@ -936,6 +936,10 @@ func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 }
 
 func (c *Copyright) Validate() error {
+	if c.EndYear == 0 {
+		return nil
+	}
+
 	if c.EndYear < c.StartYear {
 		return errors.New("start year must come before end year")
 	}
@@ -944,7 +948,7 @@ func (c *Copyright) Validate() error {
 }
 
 func (c *Copyright) SetStartYear(year int) error {
-	if year > c.EndYear {
+	if c.EndYear == 0 && year > c.EndYear {
 		return errors.New("start year must come before end year")
 	}
 
@@ -954,7 +958,7 @@ func (c *Copyright) SetStartYear(year int) error {
 }
 
 func (c *Copyright) SetEndYear(year int) error {
-	if year > c.EndYear {
+	if year < c.StartYear {
 		return errors.New("start year must come before end year")
 	}
 

@@ -32,7 +32,16 @@ func TestFileLoad(t *testing.T) {
 			},
 		},
 		{
-			name: "Passing-Apache-2.0",
+			name: "Passing-Apache-2.0-NoEndYear",
+			input: input{
+				licenseType: APACHE_2_0,
+				startYear:   2024,
+				holder:      "Peanut Butter",
+				projectName: "Ligen",
+			},
+		},
+		{
+			name: "Passing-Apache-2.0-WithEndYear",
 			input: input{
 				licenseType: APACHE_2_0,
 				startYear:   2024,
