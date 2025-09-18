@@ -31,16 +31,36 @@ func TestFileLoad(t *testing.T) {
 				projectName: "", // unused for MIT
 			},
 		},
-		// {
-		// 	name: "Passing-Apache-2.0",
-		// 	input: input{
-		// 		licenseType: APACHE_2_0,
-		// 		startYear:   2024,
-		// 		endYear:     2025,
-		// 		holder:      "Peanut Butter",
-		// 		projectName: "Ligen",
-		// 	},
-		// },
+		{
+			name: "Passing-Apache-2.0",
+			input: input{
+				licenseType: APACHE_2_0,
+				startYear:   2024,
+				endYear:     2025,
+				holder:      "Peanut Butter",
+				projectName: "Ligen",
+			},
+		},
+		{
+			name: "Passing-Mozilla-2.0",
+			input: input{
+				licenseType: MOZILLA_2_0,
+				startYear:   2024,
+				endYear:     2025,
+				holder:      "Peanut Butter",
+				projectName: "Ligen",
+			},
+		},
+		{
+			name: "Passing-GNU-Lesser-3.0",
+			input: input{
+				licenseType: GNU_LESSER_3_0,
+				startYear:   2024,
+				endYear:     2025,
+				holder:      "Peanut Butter",
+				projectName: "Ligen",
+			},
+		},
 	}
 
 	for _, tc := range tests {

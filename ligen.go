@@ -1002,7 +1002,7 @@ func ApacheGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]
 
 	// Reset the buffer so we can re-use it
 	dest.Reset()
-	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, Holder: cr.Holder}); err != nil {
+	if err := SimpleNoticeTemplate.Execute(dest, &NoticeInput{ProjectName: *projectName, StartYear: cr.StartYear, EndYear: cr.EndYear, Holder: cr.Holder}); err != nil {
 		return nil, err
 	}
 	writeableSlice[1] = Writeable{Content: dest.String(), Path: "NOTICE"}
