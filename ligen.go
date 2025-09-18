@@ -1128,9 +1128,9 @@ func (lt LicenseType) RequiresNotice() bool {
 }
 
 type License struct {
-	projectName   string
-	copyright     Copyright
-	generatorFunc WriteableGenerator
+	projectName string
+	copyright   Copyright
+	licenseType LicenseType
 }
 
 func New(projectName string, holder string, startYear int, endYear int, licenseType LicenseType) (*License, error) {
@@ -1145,22 +1145,22 @@ func New(projectName string, holder string, startYear int, endYear int, licenseT
 		return &License{}, err
 	}
 
-	generatorFunc, err := licenseType.GeneratorFunc()
-	if err != nil {
-		return &License{}, err
-	}
-
 	return &License{
-		projectName:   projectName,
-		copyright:     copyright,
-		generatorFunc: generatorFunc,
+		projectName: projectName,
+		copyright:   copyright,
+		licenseType: licenseType,
 	}, nil
 }
 
 func (l *License) Render() ([]Writeable, error) {
+	generatorFunc, err := l.licenseType.GeneratorFunc()
+	if err != nil {
+		return nil, err
+	}
+
 	var content bytes.Buffer
 
-	writeable, err := l.generatorFunc(&l.projectName, &l.copyright, &content)
+	writeable, err := generatorFunc(&l.projectName, &l.copyright, &content)
 
 	if err != nil {
 		return nil, err
@@ -1183,12 +1183,6 @@ func (l *License) SetCopyrightStartYear(year int) error {
 }
 
 func (l *License) SetLicenseType(licenseType LicenseType) error {
-	generator, err := licenseType.GeneratorFunc()
-	if err != nil {
-		return err
-	}
-
-	l.generatorFunc = generator
-
+	l.licenseType = licenseType
 	return nil
 }

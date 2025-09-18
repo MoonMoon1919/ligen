@@ -6,34 +6,35 @@ import (
 	"testing"
 )
 
+func buildWriteables(f WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) ([]Writeable, error) {
+	cr, err := NewCopyright(holder, startYear, endYear)
+	if err != nil {
+		return nil, err
+	}
+
+	writeable, err := f(&projectName, &cr, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return writeable, nil
+}
+
+func builder(t *testing.T, lt LicenseType, startYear, endYear int, holder string, projectName string) []Writeable {
+	var buf bytes.Buffer
+	generatorFunc, _ := lt.GeneratorFunc()
+	builtLicense, err := buildWriteables(generatorFunc, projectName, holder, startYear, endYear, &buf)
+	if err != nil {
+		t.FailNow()
+		return nil
+	}
+
+	buf.Reset()
+
+	return builtLicense
+}
+
 func TestParseDoc(t *testing.T) {
-	buildInput := func(f WriteableGenerator, projectName string, holder string, startYear, endYear int, dest *bytes.Buffer) ([]Writeable, error) {
-		cr, err := NewCopyright(holder, startYear, endYear)
-		if err != nil {
-			return nil, err
-		}
-
-		writeable, err := f(&projectName, &cr, dest)
-		if err != nil {
-			return nil, err
-		}
-
-		return writeable, nil
-	}
-
-	builder := func(t *testing.T, lt LicenseType, startYear, endYear int, holder string) []Writeable {
-		var buf bytes.Buffer
-		generatorFunc, _ := lt.GeneratorFunc()
-		builtLicense, err := buildInput(generatorFunc, "Ligen", holder, startYear, endYear, &buf)
-		if err != nil {
-			t.FailNow()
-			return nil
-		}
-
-		buf.Reset()
-
-		return builtLicense
-	}
 
 	type input struct {
 		holder      string
@@ -57,7 +58,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-MIT",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, MIT, startYear, endYear, holder)
+				docs := builder(t, MIT, startYear, endYear, holder, "Ligen")
 				return docs[0].Content
 			},
 			input:        commonInput,
@@ -66,7 +67,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-Apache_2_0",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, APACHE_2_0, startYear, endYear, holder)
+				docs := builder(t, APACHE_2_0, startYear, endYear, holder, "Ligen")
 				return docs[0].Content
 			},
 			input:        commonInput,
@@ -75,7 +76,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-Mozilla",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, MOZILLA_2_0, startYear, endYear, holder)
+				docs := builder(t, MOZILLA_2_0, startYear, endYear, holder, "Ligen")
 				return docs[1].Content
 			},
 			input:        commonInput,
@@ -84,7 +85,7 @@ func TestParseDoc(t *testing.T) {
 		{
 			name: "Passing-GNULesser",
 			inputBuilder: func(t *testing.T, startYear, endYear int, holder string) string {
-				docs := builder(t, GNU_LESSER_3_0, startYear, endYear, holder)
+				docs := builder(t, GNU_LESSER_3_0, startYear, endYear, holder, "Ligen")
 				return docs[1].Content
 			},
 			input:        commonInput,
@@ -100,7 +101,7 @@ func TestParseDoc(t *testing.T) {
 				tc.input.holder,
 			)
 
-			parsedCopyright, err := ParseDoc(input)
+			parsedCopyright, err := ParseDocForCopyright(input)
 
 			checkError(tc.errorMessage, err, t)
 			if tc.errorMessage != "" {

@@ -14,7 +14,28 @@ var (
 	copyrightNotFoundError = errors.New("no copyright line found")
 )
 
-func ParseDoc(content string) (Copyright, error) {
+// ParseProjectNameFromNotice extracts the project name from the first line of a multi-line document
+// The project name must be the entire first line (trimmed of whitespace)
+// This is used to extract a project name out of a notice file.
+func ParseProjectNameFromNotice(document string) (string, error) {
+	// Split document into lines
+	lines := strings.Split(document, "\n")
+	if len(lines) == 0 {
+		return "", fmt.Errorf("empty document")
+	}
+
+	// Get the first line and trim whitespace and carriage returns
+	firstLine := strings.TrimSpace(strings.TrimRight(lines[0], "\r"))
+
+	// Check if first line is empty
+	if firstLine == "" {
+		return "", fmt.Errorf("first line is empty")
+	}
+
+	return firstLine, nil
+}
+
+func ParseDocForCopyright(content string) (Copyright, error) {
 	reader := strings.NewReader(content)
 	scanner := bufio.NewScanner(reader)
 

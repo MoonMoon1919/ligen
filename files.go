@@ -16,73 +16,110 @@ func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) er
 	return err
 }
 
-type licenseLoadResult struct {
+type LicenseLoadResult struct {
 	licenseType LicenseType
 	content     string
 }
 
-func loadLicense(reader io.Reader) (licenseLoadResult, error) {
+func loadLicense(reader io.Reader) (LicenseLoadResult, error) {
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return licenseLoadResult{}, err
+		return LicenseLoadResult{}, err
 	}
 
 	contentString := string(content)
 
 	licenseType, err := Match(contentString, 0.90)
 	if err != nil {
-		return licenseLoadResult{}, err
+		return LicenseLoadResult{}, err
 	}
 
-	return licenseLoadResult{
+	return LicenseLoadResult{
 		licenseType: licenseType,
 		content:     contentString,
 	}, nil
 }
 
-type FileRepository struct{}
+func loadNotice(reader io.Reader) (string, error) {
+	noticeContent, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
 
-func (f FileRepository) Load(path string, license *License) error {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	return string(noticeContent), nil
+}
+
+type loader func() (io.Reader, error)
+
+func Load(license *License, licenseLoader loader, noticeLoader loader) error {
+	licenseReader, err := licenseLoader()
 	if err != nil {
 		return err
 	}
 
-	defer file.Close()
-	result, err := loadLicense(file)
+	licenseResult, err := loadLicense(licenseReader)
 	if err != nil {
 		return err
 	}
 
-	var copyright Copyright
+	var projectName string
+	contentContainingCopyright := licenseResult.content
 
-	if result.licenseType.RequiresNotice() {
-		noticeFile, err := os.OpenFile("NOTICE", os.O_RDONLY, 0644)
+	if licenseResult.licenseType.RequiresNotice() {
+		noticeReader, err := noticeLoader()
 		if err != nil {
 			return err
 		}
 
-		noticeContent, err := io.ReadAll(noticeFile)
+		notice, err := loadNotice(noticeReader)
 		if err != nil {
 			return err
 		}
-		copyright, err = ParseDoc(string(noticeContent))
+
+		contentContainingCopyright = notice
+
+		projectName, err = ParseProjectNameFromNotice(notice)
 		if err != nil {
 			return err
 		}
-	} else {
-		copyright, err = ParseDoc(result.content)
-		if err != nil {
-			return err
-		}
+	}
+
+	copyright, err := ParseDocForCopyright(contentContainingCopyright)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Set project name from notice, since that's the only place it is set
-	license.projectName = ""
+	license.projectName = projectName
 	license.copyright = copyright
-	license.SetLicenseType(result.licenseType)
+	license.SetLicenseType(licenseResult.licenseType)
 
 	return nil
+}
+
+func loadFile(path string) (io.Reader, error) {
+	noticeFile, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	defer noticeFile.Close()
+
+	return noticeFile, nil
+}
+
+type FileRepository struct{}
+
+func (f FileRepository) Load(path string, license *License) error {
+	ll := func() (io.Reader, error) {
+		return loadFile(path)
+	}
+
+	nl := func() (io.Reader, error) {
+		return loadFile("NOTICE")
+	}
+
+	return Load(license, ll, nl)
 }
 
 func (f FileRepository) Write(license *License) error {
