@@ -31,9 +31,9 @@ type CopyrightYears struct {
 	End   int
 }
 
-func (s Service) GetYears() (CopyrightYears, error) {
+func (s Service) GetYears(path string) (CopyrightYears, error) {
 	var license License
-	err := s.repo.Load("LICENSE", &license)
+	err := s.repo.Load(path, &license)
 	if err != nil {
 		return CopyrightYears{}, err
 	}
@@ -44,9 +44,9 @@ func (s Service) GetYears() (CopyrightYears, error) {
 	}, nil
 }
 
-func (s Service) GetLicenseType() (LicenseType, error) {
+func (s Service) GetLicenseType(path string) (LicenseType, error) {
 	var license License
-	err := s.repo.Load("LICENSE", &license)
+	err := s.repo.Load(path, &license)
 	if err != nil {
 		return LicenseType(-1), err
 	}
@@ -54,9 +54,9 @@ func (s Service) GetLicenseType() (LicenseType, error) {
 	return license.licenseType, nil
 }
 
-func (s Service) UpdateEndYear(year int) error {
+func (s Service) UpdateEndYear(path string, year int) error {
 	var license License
-	err := s.repo.Load("LICENSE", &license)
+	err := s.repo.Load(path, &license)
 	if err != nil {
 		return err
 	}
