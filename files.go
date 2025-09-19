@@ -84,12 +84,14 @@ func Load(license *License, licenseLoader loader, noticeLoader loader) error {
 		}
 	}
 
-	copyright, err := ParseDocForCopyright(contentContainingCopyright)
-	if err != nil {
-		return err
+	var copyright Copyright
+	if licenseResult.licenseType.RequiresCopyright() {
+		copyright, err = ParseDocForCopyright(contentContainingCopyright)
+		if err != nil {
+			return err
+		}
 	}
 
-	// TODO: Set project name from notice, since that's the only place it is set
 	license.projectName = projectName
 	license.copyright = copyright
 	license.SetLicenseType(licenseResult.licenseType)

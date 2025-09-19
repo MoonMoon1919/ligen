@@ -1094,6 +1094,25 @@ func (lt LicenseType) Template() (string, error) {
 	}
 }
 
+func (lt LicenseType) String() string {
+	switch lt {
+	case MIT:
+		return "MIT"
+	case BOOST_1_0:
+		return "BOOST_1_0"
+	case UNLICENSE:
+		return "UNLICENSE"
+	case APACHE_2_0:
+		return "APACHE_2_0"
+	case MOZILLA_2_0:
+		return "MOZILLA_2_0"
+	case GNU_LESSER_3_0:
+		return "GNU_LESSER_3_0"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 func (lt LicenseType) Compare(left string, comparisonFunc func(left, right string) float64) (float64, error) {
 	tmp, err := lt.Template()
 	if err != nil {
@@ -1128,6 +1147,15 @@ func (lt LicenseType) RequiresNotice() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (lt LicenseType) RequiresCopyright() bool {
+	switch lt {
+	case UNLICENSE, BOOST_1_0:
+		return false
+	default:
+		return true
 	}
 }
 

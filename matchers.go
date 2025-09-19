@@ -68,7 +68,7 @@ func Match(content string, threshold float64) (LicenseType, error) {
 		distance, err := licenseType.Compare(content, SorensonDiceCoefficient)
 
 		if err != nil {
-			return LicenseType(-1), errors.New("Detection failed")
+			return LicenseType(-1), DetectionFailedError
 		}
 
 		// If the coefficient is 1, it's an exect match
