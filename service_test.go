@@ -25,12 +25,12 @@ func NewFakeRepo(files ...Writeable) FakeRepo {
 }
 
 func (f *FakeRepo) Load(path string, license *License) error {
-	ll := func() (io.Reader, error) {
-		return strings.NewReader(f.files[path]), nil
+	ll := func() (io.Reader, func() error, error) {
+		return strings.NewReader(f.files[path]), func() error { return nil }, nil
 	}
 
-	nl := func() (io.Reader, error) {
-		return strings.NewReader(f.files["NOTICE"]), nil
+	nl := func() (io.Reader, func() error, error) {
+		return strings.NewReader(f.files["NOTICE"]), func() error { return nil }, nil
 	}
 
 	return Load(license, ll, nl)

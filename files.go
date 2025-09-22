@@ -49,13 +49,14 @@ func loadNotice(reader io.Reader) (string, error) {
 	return string(noticeContent), nil
 }
 
-type loader func() (io.Reader, error)
+type loader func() (io.Reader, func() error, error)
 
 func Load(license *License, licenseLoader loader, noticeLoader loader) error {
-	licenseReader, err := licenseLoader()
+	licenseReader, close, err := licenseLoader()
 	if err != nil {
 		return err
 	}
+	defer close()
 
 	licenseResult, err := loadLicense(licenseReader)
 	if err != nil {
@@ -66,10 +67,11 @@ func Load(license *License, licenseLoader loader, noticeLoader loader) error {
 	contentContainingCopyright := licenseResult.content
 
 	if licenseResult.licenseType.RequiresNotice() {
-		noticeReader, err := noticeLoader()
+		noticeReader, close, err := noticeLoader()
 		if err != nil {
 			return err
 		}
+		defer close()
 
 		notice, err := loadNotice(noticeReader)
 		if err != nil {
@@ -99,25 +101,27 @@ func Load(license *License, licenseLoader loader, noticeLoader loader) error {
 	return nil
 }
 
-func loadFile(path string) (io.Reader, error) {
+func loadFile(path string) (io.Reader, func() error, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	defer f.Close()
+	close := func() error {
+		return f.Close()
+	}
 
-	return f, nil
+	return f, close, nil
 }
 
 type FileRepository struct{}
 
 func (f FileRepository) Load(path string, license *License) error {
-	ll := func() (io.Reader, error) {
+	ll := func() (io.Reader, func() error, error) {
 		return loadFile(path)
 	}
 
-	nl := func() (io.Reader, error) {
+	nl := func() (io.Reader, func() error, error) {
 		return loadFile("NOTICE")
 	}
 

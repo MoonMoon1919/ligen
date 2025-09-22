@@ -77,15 +77,15 @@ func TestFileLoad(t *testing.T) {
 			// GIVEN
 			docs := builder(t, tc.input.licenseType, tc.input.startYear, tc.input.endYear, tc.input.holder, tc.input.projectName)
 
-			licenseLoader := func() (io.Reader, error) {
-				return strings.NewReader(docs[0].Content), nil
+			licenseLoader := func() (io.Reader, func() error, error) {
+				return strings.NewReader(docs[0].Content), func() error { return nil }, nil
 			}
 
-			noticeLoader := func() (io.Reader, error) {
+			noticeLoader := func() (io.Reader, func() error, error) {
 				if len(docs) > 1 {
-					return strings.NewReader(docs[1].Content), nil
+					return strings.NewReader(docs[1].Content), func() error { return nil }, nil
 				}
-				return nil, nil
+				return nil, func() error { return nil }, nil
 			}
 
 			expected := License{
