@@ -281,3 +281,67 @@ func TestLicenseRender(t *testing.T) {
 		})
 	}
 }
+
+func TestLicenseTypeFromString(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		expected     LicenseType
+		errorMessage string
+	}{
+		{
+			name:         "Passing-MIT",
+			input:        "mit",
+			expected:     MIT,
+			errorMessage: "",
+		},
+		{
+			name:         "Passing-BOOST",
+			input:        "boost",
+			expected:     BOOST_1_0,
+			errorMessage: "",
+		},
+		{
+			name:         "Passing-UNLICENSE",
+			input:        "unlicense",
+			expected:     UNLICENSE,
+			errorMessage: "",
+		},
+		{
+			name:         "Passing-APACHE",
+			input:        "apache",
+			expected:     APACHE_2_0,
+			errorMessage: "",
+		},
+		{
+			name:         "Passing-MOZILLA",
+			input:        "mozilla",
+			expected:     MOZILLA_2_0,
+			errorMessage: "",
+		},
+		{
+			name:         "Passing-GNU_LESSER",
+			input:        "gnu_lesser",
+			expected:     GNU_LESSER_3_0,
+			errorMessage: "",
+		},
+		{
+			name:         "Failing-Invalid",
+			input:        "foobar",
+			expected:     LicenseType(-1),
+			errorMessage: InvalidLicenseType.Error(),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			lt, err := LicenseTypeFromString(tc.input)
+
+			checkError(tc.errorMessage, err, t)
+
+			if lt != tc.expected {
+				t.Errorf("Expected %s, got %s", tc.expected.String(), lt.String())
+			}
+		})
+	}
+}

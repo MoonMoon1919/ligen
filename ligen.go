@@ -20,6 +20,7 @@ var (
 	EmptyNameError        = errors.New("Name must not be empty")
 	NameTooLongError      = errors.New("Name must be 128 chars")
 	InvalidYearRangeError = errors.New("End year must be greater than start year")
+	InvalidLicenseType    = errors.New("invalid license type")
 )
 
 const (
@@ -244,6 +245,27 @@ func (lt LicenseType) String() string {
 		return "GNU_LESSER_3_0"
 	default:
 		return "UNKNOWN"
+	}
+}
+
+func LicenseTypeFromString(licenseType string) (LicenseType, error) {
+	licenseType = strings.ToUpper(licenseType)
+
+	switch licenseType {
+	case "MIT":
+		return MIT, nil
+	case "BOOST":
+		return BOOST_1_0, nil
+	case "UNLICENSE":
+		return UNLICENSE, nil
+	case "APACHE":
+		return APACHE_2_0, nil
+	case "MOZILLA":
+		return MOZILLA_2_0, nil
+	case "GNU_LESSER":
+		return GNU_LESSER_3_0, nil
+	default:
+		return LicenseType(-1), InvalidLicenseType
 	}
 }
 
