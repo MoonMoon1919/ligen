@@ -83,7 +83,7 @@ func (c *Copyright) Validate() error {
 }
 
 func (c *Copyright) SetStartYear(year int) error {
-	if c.EndYear == 0 && year > c.EndYear {
+	if c.EndYear != 0 && year > c.EndYear {
 		return errors.New("start year must come before end year")
 	}
 

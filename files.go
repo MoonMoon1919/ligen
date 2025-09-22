@@ -143,13 +143,13 @@ func (f FileRepository) Write(license *License) error {
 		}
 		defer file.Close()
 
-		Write(file, writeable, render)
-
-		return nil
+		return Write(file, writeable, render)
 	}
 
 	for _, writeable := range writeables {
-		write(&writeable, renderOpts)
+		if err := write(&writeable, renderOpts); err != nil {
+			return err
+		}
 	}
 
 	return nil
