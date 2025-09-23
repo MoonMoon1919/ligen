@@ -383,6 +383,303 @@ func TestServiceGetLicenseType(t *testing.T) {
 	}
 }
 
+func TestServiceUpdateHolder(t *testing.T) {
+	type input struct {
+		start       int
+		end         int
+		holder      string
+		licenseType LicenseType
+		projectName string
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		newHolder    string
+		fileToCheck  string
+		errorMessage string
+	}{
+		{
+			name: "Pass-MIT",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: MIT,
+				projectName: "Ligen",
+			},
+			fileToCheck: "LICENSE",
+			newHolder:   "Jelly",
+		},
+		{
+			name: "Pass-Apache-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: APACHE_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck: "LICENSE",
+			newHolder:   "Jelly",
+		},
+		{
+			name: "Pass-GNULesser-3.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: GNU_LESSER_3_0,
+				projectName: "Ligen",
+			},
+			fileToCheck: "COPYING.LESSER",
+			newHolder:   "Jelly",
+		},
+		{
+			name: "Pass-Mozzila-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: MOZILLA_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck: "LICENSE",
+			newHolder:   "Jelly",
+		},
+	}
+
+	for _, tc := range tests {
+		repo := NewFakeRepo()
+		svc := NewService(&repo)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := svc.Create(
+				tc.input.projectName,
+				tc.input.holder,
+				tc.input.start,
+				tc.input.end,
+				tc.input.licenseType,
+			)
+			if err != nil {
+				t.Error(err)
+				t.FailNow()
+			}
+
+			err = svc.UpdateHolder(tc.fileToCheck, tc.newHolder)
+			checkError(tc.errorMessage, err, t)
+			if tc.errorMessage != "" {
+				return
+			}
+
+			var license License
+			err = repo.Load(tc.fileToCheck, &license)
+			if err != nil {
+				t.Error(err.Error())
+				t.FailNow()
+			}
+
+			if license.copyright.Holder != tc.newHolder {
+				t.Errorf("Expected %s, got %s", license.copyright.Holder, tc.newHolder)
+			}
+		})
+	}
+}
+
+func TestServiceUpdateProjectName(t *testing.T) {
+	type input struct {
+		start       int
+		end         int
+		holder      string
+		licenseType LicenseType
+		projectName string
+	}
+
+	tests := []struct {
+		name           string
+		input          input
+		newProjectName string
+		fileToCheck    string
+		errorMessage   string
+	}{
+		{
+			name: "Pass-Apache-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: APACHE_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:    "LICENSE",
+			newProjectName: "license-generator",
+		},
+		{
+			name: "Pass-GNULesser-3.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: GNU_LESSER_3_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:    "COPYING.LESSER",
+			newProjectName: "license-generator",
+		},
+		{
+			name: "Pass-Mozzila-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: MOZILLA_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:    "LICENSE",
+			newProjectName: "license-generator",
+		},
+	}
+
+	for _, tc := range tests {
+		repo := NewFakeRepo()
+		svc := NewService(&repo)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := svc.Create(
+				tc.input.projectName,
+				tc.input.holder,
+				tc.input.start,
+				tc.input.end,
+				tc.input.licenseType,
+			)
+			if err != nil {
+				t.Error(err)
+				t.FailNow()
+			}
+
+			err = svc.UpdateProjectName(tc.fileToCheck, tc.newProjectName)
+			checkError(tc.errorMessage, err, t)
+			if tc.errorMessage != "" {
+				return
+			}
+
+			var license License
+			err = repo.Load(tc.fileToCheck, &license)
+			if err != nil {
+				t.Error(err.Error())
+				t.FailNow()
+			}
+
+			if license.projectName != tc.newProjectName {
+				t.Errorf("Expected %s, got %s", license.projectName, tc.newProjectName)
+			}
+		})
+	}
+}
+
+func TestServiceUpdateStartYear(t *testing.T) {
+	type input struct {
+		start       int
+		end         int
+		holder      string
+		licenseType LicenseType
+		projectName string
+	}
+
+	tests := []struct {
+		name         string
+		input        input
+		newStartYear int
+		fileToCheck  string
+		errorMessage string
+	}{
+		{
+			name: "Pass-MIT",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: MIT,
+				projectName: "Ligen",
+			},
+			fileToCheck:  "LICENSE",
+			newStartYear: 2022,
+		},
+		{
+			name: "Pass-Apache-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: APACHE_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:  "LICENSE",
+			newStartYear: 2022,
+		},
+		{
+			name: "Pass-GNULesser-3.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: GNU_LESSER_3_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:  "COPYING.LESSER",
+			newStartYear: 2022,
+		},
+		{
+			name: "Pass-Mozzila-2.0",
+			input: input{
+				start:       2023,
+				end:         2025,
+				holder:      "Peanut Butter",
+				licenseType: MOZILLA_2_0,
+				projectName: "Ligen",
+			},
+			fileToCheck:  "LICENSE",
+			newStartYear: 2022,
+		},
+	}
+
+	for _, tc := range tests {
+		repo := NewFakeRepo()
+		svc := NewService(&repo)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := svc.Create(
+				tc.input.projectName,
+				tc.input.holder,
+				tc.input.start,
+				tc.input.end,
+				tc.input.licenseType,
+			)
+			if err != nil {
+				t.Error(err)
+				t.FailNow()
+			}
+
+			err = svc.UpdateStartYear(tc.fileToCheck, tc.newStartYear)
+			checkError(tc.errorMessage, err, t)
+			if tc.errorMessage != "" {
+				return
+			}
+
+			var license License
+			err = repo.Load(tc.fileToCheck, &license)
+			if err != nil {
+				t.Error(err.Error())
+				t.FailNow()
+			}
+
+			if license.copyright.StartYear != tc.newStartYear {
+				t.Errorf("Expected %d, got %d", license.copyright.StartYear, tc.newStartYear)
+			}
+		})
+	}
+}
+
 func TestServiceUpdateEndYear(t *testing.T) {
 	type input struct {
 		start       int

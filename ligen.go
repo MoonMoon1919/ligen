@@ -20,6 +20,8 @@ var (
 	StartYearTooNewError        = errors.New("start year cannot be in the future")
 	EndYearTooOldError          = errors.New("end year cannot be in the past")
 	EndYearBeforeStartError     = errors.New("end year must be after start year")
+	EmptyHolderError            = errors.New("holder must not be empty")
+	HolderTooLongError          = errors.New("holder must be less than 128 chars")
 	EmptyNameError              = errors.New("name must not be empty")
 	NameTooLongError            = errors.New("name must be 128 chars")
 	NameTooShortError           = errors.New("project name must have at least 1 character")
@@ -91,7 +93,25 @@ func (c *Copyright) Validate() error {
 	return nil
 }
 
+func (c *Copyright) SetHolder(holder string) error {
+	if len(holder) == 0 {
+		return EmptyHolderError
+	}
+
+	if len(holder) > 128 {
+		return HolderTooLongError
+	}
+
+	c.Holder = holder
+
+	return nil
+}
+
 func (c *Copyright) SetStartYear(year int) error {
+	if year == 0 {
+		return StartYearTooOldError
+	}
+
 	if c.EndYear != 0 && year > c.EndYear {
 		return EndYearBeforeStartError
 	}
@@ -330,11 +350,23 @@ type License struct {
 	licenseType LicenseType
 }
 
+func validateProjectName(name string) error {
+	if len(name) == 0 {
+		return NameTooShortError
+	}
+
+	if len(name) > 128 {
+		return NameTooLongError
+	}
+
+	return nil
+}
+
 func New(projectName string, holder string, startYear int, endYear int, licenseType LicenseType) (*License, error) {
 	projectName = strings.TrimSpace(projectName)
 
-	if len(projectName) == 0 {
-		return &License{}, NameTooShortError
+	if err := validateProjectName(projectName); err != nil {
+		return &License{}, err
 	}
 
 	copyright, err := NewCopyright(holder, startYear, endYear)
@@ -367,7 +399,16 @@ func (l *License) Render() ([]Writeable, error) {
 }
 
 func (l *License) SetHolder(holder string) error {
-	l.copyright.Holder = holder
+	return l.copyright.SetHolder(holder)
+}
+
+func (l *License) SetProjectName(name string) error {
+	if err := validateProjectName(name); err != nil {
+		return err
+	}
+
+	l.projectName = name
+
 	return nil
 }
 

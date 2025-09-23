@@ -31,9 +31,15 @@ type CopyrightYears struct {
 	End   int
 }
 
-func (s Service) GetYears(path string) (CopyrightYears, error) {
+func (s Service) load(path string) (*License, error) {
 	var license License
 	err := s.repo.Load(path, &license)
+
+	return &license, err
+}
+
+func (s Service) GetYears(path string) (CopyrightYears, error) {
+	license, err := s.load(path)
 	if err != nil {
 		return CopyrightYears{}, err
 	}
@@ -45,8 +51,7 @@ func (s Service) GetYears(path string) (CopyrightYears, error) {
 }
 
 func (s Service) GetLicenseType(path string) (LicenseType, error) {
-	var license License
-	err := s.repo.Load(path, &license)
+	license, err := s.load(path)
 	if err != nil {
 		return LicenseType(-1), err
 	}
@@ -54,14 +59,39 @@ func (s Service) GetLicenseType(path string) (LicenseType, error) {
 	return license.licenseType, nil
 }
 
-func (s Service) UpdateEndYear(path string, year int) error {
-	var license License
-	err := s.repo.Load(path, &license)
+func (s Service) loadSetFlush(path string, op func(license *License) error) error {
+	license, err := s.load(path)
 	if err != nil {
 		return err
 	}
 
-	license.SetCopyrightEndYear(year)
+	if err = op(license); err != nil {
+		return err
+	}
 
-	return s.repo.Write(&license)
+	return s.repo.Write(license)
+}
+
+func (s Service) UpdateProjectName(path string, name string) error {
+	return s.loadSetFlush(path, func(license *License) error {
+		return license.SetProjectName(name)
+	})
+}
+
+func (s Service) UpdateHolder(path string, holder string) error {
+	return s.loadSetFlush(path, func(license *License) error {
+		return license.SetHolder(holder)
+	})
+}
+
+func (s Service) UpdateStartYear(path string, year int) error {
+	return s.loadSetFlush(path, func(license *License) error {
+		return license.SetCopyrightStartYear(year)
+	})
+}
+
+func (s Service) UpdateEndYear(path string, year int) error {
+	return s.loadSetFlush(path, func(license *License) error {
+		return license.SetCopyrightEndYear(year)
+	})
 }
