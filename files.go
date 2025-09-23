@@ -1,6 +1,7 @@
 package ligen
 
 import (
+	"errors"
 	"io"
 	"os"
 )
@@ -153,4 +154,34 @@ func (f FileRepository) Write(license *License) error {
 	}
 
 	return nil
+}
+
+func DiscoverLicenseFile() (string, error) {
+	// Files without extensions first (standard convention)
+	primaryCandidates := []string{
+		"LICENSE",
+		"UNLICENSE",
+		"COPYING.LESSER",
+	}
+
+	// Check primary candidates first
+	for _, candidate := range primaryCandidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+
+	// Fallback to files with extensions if no standard files found
+	fallbackCandidates := []string{
+		"LICENSE.txt",
+		"LICENSE.md",
+	}
+
+	for _, candidate := range fallbackCandidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+
+	return "", errors.New("no license file found in current directory")
 }
