@@ -16,11 +16,16 @@ type NoticeInput struct {
 
 // General use copyright line
 var (
-	InvalidYearError      = errors.New("Invalid year")
-	EmptyNameError        = errors.New("Name must not be empty")
-	NameTooLongError      = errors.New("Name must be 128 chars")
-	InvalidYearRangeError = errors.New("End year must be greater than start year")
-	InvalidLicenseType    = errors.New("invalid license type")
+	StartYearTooOldError        = errors.New("start year cannot be more than 50 years in the past")
+	StartYearTooNewError        = errors.New("start year cannot be in the future")
+	EndYearTooOldError          = errors.New("end year cannot be in the past")
+	EndYearBeforeStartError     = errors.New("end year must be after start year")
+	EmptyNameError              = errors.New("name must not be empty")
+	NameTooLongError            = errors.New("name must be 128 chars")
+	NameTooShortError           = errors.New("project name must have at least 1 character")
+	InvalidLicenseType          = errors.New("invalid license type")
+	UnsupportedLicenseTypeError = errors.New("unsupported license type")
+	NoKnownTemplateError        = errors.New("no template found")
 )
 
 const (
@@ -42,8 +47,12 @@ func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 	currentYear := time.Now().Year()
 	fiftyYearsAgo := currentYear - MAX_YEARS_PAST
 
-	if startYear > currentYear || startYear < fiftyYearsAgo {
-		return Copyright{}, InvalidYearError
+	if startYear > currentYear {
+		return Copyright{}, StartYearTooNewError
+	}
+
+	if startYear < fiftyYearsAgo {
+		return Copyright{}, StartYearTooOldError
 	}
 
 	strippedName := strings.TrimSpace(name)
@@ -57,11 +66,11 @@ func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 
 	if endYear != 0 {
 		if endYear < startYear {
-			return Copyright{}, InvalidYearRangeError
+			return Copyright{}, EndYearBeforeStartError
 		}
 
 		if endYear < currentYear {
-			return Copyright{}, InvalidYearError
+			return Copyright{}, EndYearTooOldError
 		}
 
 		return Copyright{Holder: name, StartYear: startYear, EndYear: endYear}, nil
@@ -76,7 +85,7 @@ func (c *Copyright) Validate() error {
 	}
 
 	if c.EndYear < c.StartYear {
-		return errors.New("start year must come before end year")
+		return EndYearBeforeStartError
 	}
 
 	return nil
@@ -84,7 +93,7 @@ func (c *Copyright) Validate() error {
 
 func (c *Copyright) SetStartYear(year int) error {
 	if c.EndYear != 0 && year > c.EndYear {
-		return errors.New("start year must come before end year")
+		return EndYearBeforeStartError
 	}
 
 	c.StartYear = year
@@ -94,7 +103,7 @@ func (c *Copyright) SetStartYear(year int) error {
 
 func (c *Copyright) SetEndYear(year int) error {
 	if year < c.StartYear {
-		return errors.New("start year must come before end year")
+		return EndYearBeforeStartError
 	}
 
 	c.EndYear = year
@@ -225,7 +234,7 @@ func (lt LicenseType) Template() (string, error) {
 	case GNU_LESSER_3_0:
 		return GNULesserLicenseBody, nil
 	default:
-		return "", errors.New("No template")
+		return "", NoKnownTemplateError
 	}
 }
 
@@ -293,7 +302,7 @@ func (lt LicenseType) GeneratorFunc() (WriteableGenerator, error) {
 	case GNU_LESSER_3_0:
 		return GNULesserGenerator, nil
 	default:
-		return nil, errors.New("Unsupported license type")
+		return nil, UnsupportedLicenseTypeError
 	}
 }
 
@@ -325,7 +334,7 @@ func New(projectName string, holder string, startYear int, endYear int, licenseT
 	projectName = strings.TrimSpace(projectName)
 
 	if len(projectName) == 0 {
-		return &License{}, errors.New("Project name must have at least 1 character")
+		return &License{}, NameTooShortError
 	}
 
 	copyright, err := NewCopyright(holder, startYear, endYear)

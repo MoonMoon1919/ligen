@@ -59,7 +59,7 @@ func TestCopyrightRender(t *testing.T) {
 				year:   1973,
 				holder: "Jelly Sandwich",
 			},
-			errorMessage: InvalidYearError.Error(),
+			errorMessage: StartYearTooOldError.Error(),
 		},
 		{
 			name: "Fail-InvalidYear-InTheFuture",
@@ -67,7 +67,7 @@ func TestCopyrightRender(t *testing.T) {
 				year:   2026,
 				holder: "Peanut Butter",
 			},
-			errorMessage: InvalidYearError.Error(),
+			errorMessage: StartYearTooNewError.Error(),
 		},
 	}
 
