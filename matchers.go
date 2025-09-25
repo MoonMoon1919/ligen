@@ -39,6 +39,8 @@ func newBigrams(s string) biggrams {
 	return bg
 }
 
+// SorensonDiceCoefficient calculates the similarity between two strings using bigram comparison.
+// Returns a value between 0.0 (no similarity) and 1.0 (identical).
 func SorensonDiceCoefficient(left, right string) float64 {
 	bigramsleft := newBigrams(left)
 	bigramsright := newBigrams(right)
@@ -60,6 +62,9 @@ type score struct {
 	distance    float64
 }
 
+// Match identifies the license type of the given content by comparing it against known license templates.
+// The threshold parameter specifies the minimum similarity score (0.0-1.0) required for a successful match.
+// Returns an error if no license meets the threshold or if comparison fails.
 func Match(content string, threshold float64) (LicenseType, error) {
 	knownLicenseTypes := AllLicensesTypes()
 	scores := make([]score, len(knownLicenseTypes))

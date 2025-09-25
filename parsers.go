@@ -14,9 +14,8 @@ var (
 	copyrightNotFoundError = errors.New("no copyright line found")
 )
 
-// ParseProjectNameFromNotice extracts the project name from the first line of a multi-line document
-// The project name must be the entire first line (trimmed of whitespace)
-// This is used to extract a project name out of a notice file.
+// ParseProjectNameFromNotice extracts the project name from the first line of a NOTICE file.
+// The project name must be the entire first line, trimmed of whitespace.
 func ParseProjectNameFromNotice(document string) (string, error) {
 	// Split document into lines
 	lines := strings.Split(document, "\n")
@@ -35,6 +34,7 @@ func ParseProjectNameFromNotice(document string) (string, error) {
 	return firstLine, nil
 }
 
+// ParseDocForCopyright scans a document line by line and returns the first valid copyright it finds.
 func ParseDocForCopyright(content string) (Copyright, error) {
 	reader := strings.NewReader(content)
 	scanner := bufio.NewScanner(reader)
@@ -51,6 +51,8 @@ func ParseDocForCopyright(content string) (Copyright, error) {
 	return Copyright{}, copyrightNotFoundError
 }
 
+// ParseCopyright parses a copyright line and extracts the holder name and year range.
+// Expects format: "Copyright [©|©] YYYY[-YYYY] Holder Name"
 func ParseCopyright(line string) (Copyright, error) {
 	line = strings.TrimSpace(line)
 

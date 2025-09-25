@@ -6,36 +6,32 @@ import (
 	"os"
 )
 
-// File management
-type RenderOptions struct {
-	TrailingNewline bool
-}
-
-func Write(writer io.Writer, writeable *Writeable, renderOpts *RenderOptions) error {
+// Write writes the content of a Writeable to the provided writer.
+func Write(writer io.Writer, writeable *Writeable) error {
 	_, err := writer.Write([]byte(writeable.Content))
 
 	return err
 }
 
-type LicenseLoadResult struct {
+type licenseLoadResult struct {
 	licenseType LicenseType
 	content     string
 }
 
-func loadLicense(reader io.Reader) (LicenseLoadResult, error) {
+func loadLicense(reader io.Reader) (licenseLoadResult, error) {
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return LicenseLoadResult{}, err
+		return licenseLoadResult{}, err
 	}
 
 	contentString := string(content)
 
 	licenseType, err := Match(contentString, 0.90)
 	if err != nil {
-		return LicenseLoadResult{}, err
+		return licenseLoadResult{}, err
 	}
 
-	return LicenseLoadResult{
+	return licenseLoadResult{
 		licenseType: licenseType,
 		content:     contentString,
 	}, nil
@@ -52,6 +48,8 @@ func loadNotice(reader io.Reader) (string, error) {
 
 type loader func() (io.Reader, func() error, error)
 
+// Load loads license information from the provided loaders and populates the License.
+// The licenseLoader provides the license file content, and noticeLoader provides the NOTICE file content if required by the license type.
 func Load(license *License, licenseLoader loader, noticeLoader loader) error {
 	licenseReader, close, err := licenseLoader()
 	if err != nil {
@@ -115,8 +113,11 @@ func loadFile(path string) (io.Reader, func() error, error) {
 	return f, close, nil
 }
 
+// FileRepository provides filesystem-based operations for loading and writing licenses.
 type FileRepository struct{}
 
+// Load reads a license file from the specified path and populates the License.
+// If the license type requires a NOTICE file, it will also read from a "NOTICE" file in the current directory.
 func (f FileRepository) Load(path string, license *License) error {
 	ll := func() (io.Reader, func() error, error) {
 		return loadFile(path)
@@ -129,26 +130,25 @@ func (f FileRepository) Load(path string, license *License) error {
 	return Load(license, ll, nl)
 }
 
+// Write writes the license files to disk based on the License configuration.
 func (f FileRepository) Write(license *License) error {
 	writeables, err := license.Render()
 	if err != nil {
 		return err
 	}
 
-	renderOpts := &RenderOptions{}
-
-	write := func(writeable *Writeable, render *RenderOptions) error {
+	write := func(writeable *Writeable) error {
 		file, err := os.OpenFile(writeable.Path, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
 		defer file.Close()
 
-		return Write(file, writeable, render)
+		return Write(file, writeable)
 	}
 
 	for _, writeable := range writeables {
-		if err := write(&writeable, renderOpts); err != nil {
+		if err := write(&writeable); err != nil {
 			return err
 		}
 	}
@@ -156,6 +156,8 @@ func (f FileRepository) Write(license *License) error {
 	return nil
 }
 
+// DiscoverLicenseFile searches the current directory for a license file and returns its path.
+// It checks for standard license filenames in order of convention preference.
 func DiscoverLicenseFile() (string, error) {
 	// Files without extensions first (standard convention)
 	primaryCandidates := []string{

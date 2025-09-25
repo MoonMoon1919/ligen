@@ -2,6 +2,7 @@ package ligen
 
 import "text/template"
 
+// Template for GNU Lesser license
 const GNULesserLicenseBody = `                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
@@ -169,6 +170,7 @@ permanent authorization for you to choose that version for the
 Library.
 `
 
+// Template for GNU Lesser notice
 const GnuLesserNoticeTemplateBody = `{{.ProjectName}}
 Copyright (C) {{.StartYear}}{{if (gt .EndYear 0) }}-{{.EndYear}}{{end}} {{.Holder}}
 

@@ -1,6 +1,6 @@
 package ligen
 
-// MPL 2.0
+// Template for MPL 2.0
 const MozillaLicenseBody = `Mozilla Public License Version 2.0
 ==================================
 

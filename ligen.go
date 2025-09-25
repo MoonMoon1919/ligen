@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// NoticeInput contains the information needed to generate a NOTICE file.
 type NoticeInput struct {
 	ProjectName string
 	Holder      string
@@ -39,12 +40,16 @@ const (
 	MAX_YEARS_PAST = 50
 )
 
+// Copyright contains copyright information used to render license notices and files.
 type Copyright struct {
 	Holder    string
 	StartYear int
 	EndYear   int
 }
 
+// NewCopyright creates a new Copyright with the given holder name and year range.
+// The startYear must be within the last 50 years and not in the future.
+// If endYear is 0, only startYear is set. Otherwise, endYear must be after startYear and not in the past.
 func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 	currentYear := time.Now().Year()
 	fiftyYearsAgo := currentYear - MAX_YEARS_PAST
@@ -81,6 +86,8 @@ func NewCopyright(name string, startYear int, endYear int) (Copyright, error) {
 	return Copyright{Holder: name, StartYear: startYear}, nil
 }
 
+// Validate checks if the Copyright has a valid year range.
+// Returns an error if EndYear is set and is before StartYear.
 func (c *Copyright) Validate() error {
 	if c.EndYear == 0 {
 		return nil
@@ -93,6 +100,8 @@ func (c *Copyright) Validate() error {
 	return nil
 }
 
+// SetHolder updates the copyright holder name.
+// The holder must be non-empty and less than 128 characters.
 func (c *Copyright) SetHolder(holder string) error {
 	if len(holder) == 0 {
 		return EmptyHolderError
@@ -107,6 +116,8 @@ func (c *Copyright) SetHolder(holder string) error {
 	return nil
 }
 
+// SetStartYear updates the start year of the copyright.
+// The year must be non-zero and not after EndYear if EndYear is set.
 func (c *Copyright) SetStartYear(year int) error {
 	if year == 0 {
 		return StartYearTooOldError
@@ -121,6 +132,8 @@ func (c *Copyright) SetStartYear(year int) error {
 	return nil
 }
 
+// SetEndYear updates the end year of the copyright.
+// The year must be after or equal to StartYear.
 func (c *Copyright) SetEndYear(year int) error {
 	if year < c.StartYear {
 		return EndYearBeforeStartError
@@ -131,7 +144,7 @@ func (c *Copyright) SetEndYear(year int) error {
 	return nil
 }
 
-// License Generators
+// MITGenerator generates license files for the MIT license.
 func MITGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	if err := MITTemplate.Execute(dest, cr); err != nil {
 		return nil, err
@@ -144,6 +157,7 @@ func MITGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Wri
 	return writeableSlice, nil
 }
 
+// BoostGenerator generates license files for the Boost Software License 1.0.
 func BoostGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 1)
 	writeableSlice[0] = Writeable{Content: BoostBody, Path: "LICENSE"}
@@ -152,6 +166,7 @@ func BoostGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]W
 	return writeableSlice, nil
 }
 
+// UnlicenseGenerator generates license files for the Unlicense.
 func UnlicenseGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 1)
 	writeableSlice[0] = Writeable{Content: UnlicenseBody, Path: "UNLICENSE"}
@@ -160,6 +175,7 @@ func UnlicenseGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) 
 	return writeableSlice, nil
 }
 
+// ApacheGenerator generates license files for the Apache License 2.0.
 func ApacheGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	if err := ApacheTemplate.Execute(dest, cr); err != nil {
 		return nil, err
@@ -179,6 +195,7 @@ func ApacheGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]
 	return writeableSlice, nil
 }
 
+// MozillaGenerator generates license files for the Mozilla Public License 2.0.
 func MozillaGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 2)
 	writeableSlice[0] = Writeable{Content: MozillaLicenseBody, Path: "LICENSE"}
@@ -194,6 +211,7 @@ func MozillaGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([
 	return writeableSlice, nil
 }
 
+// GNULesserGenerator generates license files for the GNU Lesser General Public License 3.0.
 func GNULesserGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error) {
 	writeableSlice := make([]Writeable, 2)
 	writeableSlice[0] = Writeable{Content: GNULesserLicenseBody, Path: "COPYING.LESSER"}
@@ -208,8 +226,7 @@ func GNULesserGenerator(projectName *string, cr *Copyright, dest *bytes.Buffer) 
 	return writeableSlice, nil
 }
 
-// License stuff
-
+// LicenseType represents a supported open source license.
 type LicenseType int
 
 const (
@@ -221,6 +238,7 @@ const (
 	GNU_LESSER_3_0
 )
 
+// AllLicensesTypes returns a slice of all supported license types.
 func AllLicensesTypes() []LicenseType {
 	return []LicenseType{
 		MIT,
@@ -232,13 +250,16 @@ func AllLicensesTypes() []LicenseType {
 	}
 }
 
+// Writeable contains license file content and its destination path.
 type Writeable struct {
 	Content string
 	Path    string
 }
 
+// WriteableGenerator is a function that generates license files for a given license type.
 type WriteableGenerator func(projectName *string, cr *Copyright, dest *bytes.Buffer) ([]Writeable, error)
 
+// Template returns the license text template for this license type.
 func (lt LicenseType) Template() (string, error) {
 	switch lt {
 	case MIT:
@@ -258,6 +279,7 @@ func (lt LicenseType) Template() (string, error) {
 	}
 }
 
+// String returns the string representation of the license type.
 func (lt LicenseType) String() string {
 	switch lt {
 	case MIT:
@@ -277,6 +299,8 @@ func (lt LicenseType) String() string {
 	}
 }
 
+// LicenseTypeFromString parses a license type from its string representation.
+// The input is case-insensitive.
 func LicenseTypeFromString(licenseType string) (LicenseType, error) {
 	licenseType = strings.ToUpper(licenseType)
 
@@ -298,6 +322,8 @@ func LicenseTypeFromString(licenseType string) (LicenseType, error) {
 	}
 }
 
+// Compare compares the license template text with the provided text using the given comparison function.
+// Returns the similarity score from the comparison function.
 func (lt LicenseType) Compare(left string, comparisonFunc func(left, right string) float64) (float64, error) {
 	tmp, err := lt.Template()
 	if err != nil {
@@ -307,6 +333,7 @@ func (lt LicenseType) Compare(left string, comparisonFunc func(left, right strin
 	return comparisonFunc(left, tmp), nil
 }
 
+// GeneratorFunc returns the generator function for this license type.
 func (lt LicenseType) GeneratorFunc() (WriteableGenerator, error) {
 	switch lt {
 	case MIT:
@@ -326,6 +353,7 @@ func (lt LicenseType) GeneratorFunc() (WriteableGenerator, error) {
 	}
 }
 
+// RequiresNotice returns true if this license type requires a NOTICE file.
 func (lt LicenseType) RequiresNotice() bool {
 	switch lt {
 	case MOZILLA_2_0, GNU_LESSER_3_0, APACHE_2_0:
@@ -335,6 +363,7 @@ func (lt LicenseType) RequiresNotice() bool {
 	}
 }
 
+// RequiresCopyright returns true if this license type requires copyright information.
 func (lt LicenseType) RequiresCopyright() bool {
 	switch lt {
 	case UNLICENSE, BOOST_1_0:
@@ -344,6 +373,7 @@ func (lt LicenseType) RequiresCopyright() bool {
 	}
 }
 
+// License represents a complete license configuration with project name, copyright, and license type.
 type License struct {
 	projectName string
 	copyright   Copyright
@@ -362,6 +392,8 @@ func validateProjectName(name string) error {
 	return nil
 }
 
+// New creates a new License with the given project name, copyright holder, year range, and license type.
+// The project name must be 1-128 characters after trimming whitespace.
 func New(projectName string, holder string, startYear int, endYear int, licenseType LicenseType) (*License, error) {
 	projectName = strings.TrimSpace(projectName)
 
@@ -381,6 +413,8 @@ func New(projectName string, holder string, startYear int, endYear int, licenseT
 	}, nil
 }
 
+// Render generates the license files for this License.
+// Returns a slice of Writeable containing the file content and paths where they should be written.
 func (l *License) Render() ([]Writeable, error) {
 	generatorFunc, err := l.licenseType.GeneratorFunc()
 	if err != nil {
@@ -398,10 +432,13 @@ func (l *License) Render() ([]Writeable, error) {
 	return writeable, nil
 }
 
+// SetHolder updates the copyright holder name.
 func (l *License) SetHolder(holder string) error {
 	return l.copyright.SetHolder(holder)
 }
 
+// SetProjectName updates the project name.
+// The name must be 1-128 characters.
 func (l *License) SetProjectName(name string) error {
 	if err := validateProjectName(name); err != nil {
 		return err
@@ -412,14 +449,17 @@ func (l *License) SetProjectName(name string) error {
 	return nil
 }
 
+// SetCopyrightEndYear updates the copyright end year.
 func (l *License) SetCopyrightEndYear(year int) error {
 	return l.copyright.SetEndYear(year)
 }
 
+// SetCopyrightStartYear updates the copyright start year.
 func (l *License) SetCopyrightStartYear(year int) error {
 	return l.copyright.SetStartYear(year)
 }
 
+// SetLicenseType updates the license type.
 func (l *License) SetLicenseType(licenseType LicenseType) error {
 	l.licenseType = licenseType
 	return nil
